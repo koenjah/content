@@ -19,25 +19,25 @@ const Create = () => {
       <div className="max-w-3xl mx-auto">
         <Link to="/" className="flex items-center gap-2 text-accent mb-8">
           <ArrowLeft size={20} />
-          Terug naar Dashboard
+          Terug naar dashboard
         </Link>
 
         <div className="bg-card rounded p-6">
-          <h1 className="text-2xl font-bold mb-6">Nieuw Artikel Maken</h1>
+          <h1 className="text-2xl font-bold mb-6">Nieuw artikel maken</h1>
 
           <div className="space-y-6">
             <div>
               <label className="block mb-2">
-                Soort Artikel <span className="text-accent">*</span>
+                Soort artikel <span className="text-accent">*</span>
               </label>
               <select className="input-field">
-                <option>Blog Post</option>
+                <option>Blog post</option>
               </select>
             </div>
 
             <div>
               <label className="block mb-2">
-                Content Type <span className="text-accent">*</span>
+                Content type <span className="text-accent">*</span>
               </label>
               <div className="flex gap-4">
                 <button
@@ -58,7 +58,7 @@ const Create = () => {
                   }`}
                   onClick={() => setContentType('surfer')}
                 >
-                  SurferSEO URL
+                  Surferseo url
                 </button>
               </div>
             </div>
@@ -76,7 +76,7 @@ const Create = () => {
             ) : (
               <div>
                 <label className="block mb-2">
-                  SurferSEO URL <span className="text-accent">*</span>
+                  Surferseo url <span className="text-accent">*</span>
                 </label>
                 <textarea 
                   className="input-field h-32" 
@@ -87,20 +87,20 @@ const Create = () => {
 
             <div>
               <label className="block mb-2">
-                Interne Links (Beta - Max 2 per artikel)
+                Interne links (Beta)
               </label>
               <input type="text" className="input-field" placeholder="Dit werkt nog niet zo goed, doe er max 2 per artikel" />
             </div>
 
             <div>
               <label className="block mb-2">
-                Artikel Lengte <span className="text-accent">*</span>
+                Artikel lengte <span className="text-accent">*</span>
               </label>
               {contentType === 'surfer' ? (
                 <input
                   type="text"
                   className="input-field"
-                  defaultValue="Door SurferSEO aangegeven"
+                  defaultValue="Vanuit SurferSEO (AANBEVOLEN)"
                   placeholder="Aangepaste lengte (300-3000 woorden)"
                 />
               ) : (
@@ -128,7 +128,7 @@ const Create = () => {
             </div>
 
             <div>
-              <label className="block mb-2">Custom Dataset</label>
+              <label className="block mb-2">Custom dataset</label>
               <textarea
                 className="input-field h-32"
                 placeholder="Wil je een custom dataset gebruiken?"
@@ -139,10 +139,10 @@ const Create = () => {
 
             <div className="flex gap-4">
               <button className="btn-primary">
-                Artikel Genereren
+                Artikel genereren
               </button>
               <button className="bg-background text-white px-4 py-2 rounded font-medium hover:bg-opacity-90 transition-all">
-                Bulk Genereren
+                Bulk genereren
               </button>
             </div>
           </div>
