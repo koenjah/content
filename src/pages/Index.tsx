@@ -1,6 +1,8 @@
 import React from 'react';
-import { Folder, FileText, Plus } from 'lucide-react';
+import { Folder, FileText, Plus, UserPlus } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const clients = [
   "Veldkamp",
@@ -23,7 +25,6 @@ const recentArticles = [
     client: "Unifloor",
     date: "2024-02-19",
   },
-  // Add more sample articles as needed
 ];
 
 const Index = () => {
@@ -40,10 +41,22 @@ const Index = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
           <div className="bg-card rounded p-6">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <Folder className="text-accent" />
-              Klant Mappen
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold flex items-center gap-2">
+                <Folder className="text-accent" />
+                Klant Mappen
+              </h2>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <UserPlus size={18} className="text-accent" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Nieuwe Klant Toevoegen</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {clients.map((client) => (
                 <Link
