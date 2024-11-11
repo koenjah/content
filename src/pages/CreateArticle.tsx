@@ -13,9 +13,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft } from "lucide-react";
+import { SurferSeoToggle } from "@/components/article/SurferSeoToggle";
+import { FormalityToggle } from "@/components/article/FormalityToggle";
+import { TargetAudienceToggle } from "@/components/article/TargetAudienceToggle";
 
 const CreateArticle = () => {
   const navigate = useNavigate();
@@ -150,23 +152,7 @@ const CreateArticle = () => {
             </Select>
           </div>
 
-          <div>
-            <Label>Met of zonder SurferSEO?</Label>
-            <RadioGroup
-              value={useSurferSEO}
-              onValueChange={(value: "with" | "without") => setUseSurferSEO(value)}
-              className="flex gap-4 mt-2"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="with" id="with-surfer" />
-                <Label htmlFor="with-surfer">Met SurferSEO</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="without" id="without-surfer" />
-                <Label htmlFor="without-surfer">Zonder SurferSEO</Label>
-              </div>
-            </RadioGroup>
-          </div>
+          <SurferSeoToggle value={useSurferSEO} onValueChange={setUseSurferSEO} />
 
           {useSurferSEO === "with" && (
             <div>
@@ -210,17 +196,15 @@ const CreateArticle = () => {
             {useSurferSEO === "with" ? (
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="surfer" id="surfer-length" checked />
-                  <Label htmlFor="surfer-length">Vanuit SurferSEO (AANBEVOLEN)</Label>
+                  <Input
+                    type="number"
+                    value={articleLength}
+                    onChange={(e) => setArticleLength(e.target.value)}
+                    placeholder="Of voer zelf een aantal woorden in (300-3000)"
+                    min="300"
+                    max="3000"
+                  />
                 </div>
-                <Input
-                  type="number"
-                  value={articleLength}
-                  onChange={(e) => setArticleLength(e.target.value)}
-                  placeholder="Of voer zelf een aantal woorden in (300-3000)"
-                  min="300"
-                  max="3000"
-                />
               </div>
             ) : (
               <Input
@@ -234,41 +218,8 @@ const CreateArticle = () => {
             )}
           </div>
 
-          <div>
-            <Label>Je/u vorm <span className="text-accent">*</span></Label>
-            <RadioGroup
-              value={formality}
-              onValueChange={(value: "je" | "u") => setFormality(value)}
-              className="flex gap-4 mt-2"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="je" id="je-form" />
-                <Label htmlFor="je-form">Je vorm</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="u" id="u-form" />
-                <Label htmlFor="u-form">U vorm</Label>
-              </div>
-            </RadioGroup>
-          </div>
-
-          <div>
-            <Label>Doelgroep <span className="text-accent">*</span></Label>
-            <RadioGroup
-              value={targetAudience}
-              onValueChange={(value: "business" | "consumer") => setTargetAudience(value)}
-              className="flex gap-4 mt-2"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="business" id="business" />
-                <Label htmlFor="business">Bedrijven</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="consumer" id="consumer" />
-                <Label htmlFor="consumer">Consumenten</Label>
-              </div>
-            </RadioGroup>
-          </div>
+          <FormalityToggle value={formality} onValueChange={setFormality} />
+          <TargetAudienceToggle value={targetAudience} onValueChange={setTargetAudience} />
 
           <Button
             type="submit"
