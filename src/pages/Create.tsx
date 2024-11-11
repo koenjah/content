@@ -87,7 +87,7 @@ const Create = () => {
 
             <div>
               <label className="block mb-2">
-                Interne links (Beta)
+                Interne links
               </label>
               <input type="text" className="input-field" placeholder="Dit werkt nog niet zo goed, doe er max 2 per artikel" />
             </div>
@@ -101,7 +101,7 @@ const Create = () => {
                   type="text"
                   className="input-field"
                   defaultValue="Vanuit SurferSEO (AANBEVOLEN)"
-                  placeholder="Aangepaste lengte (300-3000 woorden)"
+                  placeholder="Vanuit SurferSEO (AANBEVOLEN)"
                 />
               ) : (
                 <input
