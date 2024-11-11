@@ -13,12 +13,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { ArrowLeft } from "lucide-react";
 
 const CreateArticle = () => {
   const navigate = useNavigate();
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
   const [selectedClientId, setSelectedClientId] = useState("");
+  const [useSurferSEO, setUseSurferSEO] = useState<"with" | "without">("without");
+  const [surferSEOUrl, setSurferSEOUrl] = useState("");
+  const [keywords, setKeywords] = useState("");
+  const [internalLinks, setInternalLinks] = useState("");
+  const [articleLength, setArticleLength] = useState("");
+  const [formality, setFormality] = useState<"je" | "u">("je");
+  const [targetAudience, setTargetAudience] = useState<"business" | "consumer">("business");
 
   const { data: clients = [], isLoading: isLoadingClients } = useQuery({
     queryKey: ["clients"],
@@ -39,17 +47,24 @@ const CreateArticle = () => {
   });
 
   const createArticleMutation = useMutation({
-    mutationFn: async ({ title, content, clientId }: { title: string; content: string; clientId: string }) => {
-      const wordCount = content.trim().split(/\s+/).length;
-      
+    mutationFn: async (formData: {
+      clientId: string;
+      useSurferSEO: "with" | "without";
+      surferSEOUrl?: string;
+      keywords?: string;
+      internalLinks: string;
+      articleLength: string;
+      formality: "je" | "u";
+      targetAudience: "business" | "consumer";
+    }) => {
       const { data, error } = await supabase
         .from("articles")
         .insert([
           {
-            title,
-            content,
-            client_id: clientId,
-            word_count: wordCount
+            client_id: formData.clientId,
+            content: "", // This will be filled by the AI later
+            title: "", // This will be filled by the AI later
+            word_count: parseInt(formData.articleLength) || 0,
           }
         ])
         .select()
@@ -59,7 +74,7 @@ const CreateArticle = () => {
       return data;
     },
     onSuccess: () => {
-      toast.success("Artikel succesvol aangemaakt!");
+      toast.success("Artikel wordt gegenereerd!");
       navigate("/");
     },
     onError: (error) => {
@@ -69,29 +84,61 @@ const CreateArticle = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !content.trim() || !selectedClientId) {
-      toast.error("Vul alle velden in");
+    if (!selectedClientId) {
+      toast.error("Selecteer een klant");
       return;
     }
-    createArticleMutation.mutate({ title, content, clientId: selectedClientId });
+
+    if (useSurferSEO === "with" && !surferSEOUrl) {
+      toast.error("Voer een SurferSEO URL in");
+      return;
+    }
+
+    if (useSurferSEO === "without" && !keywords) {
+      toast.error("Voer zoekwoorden in");
+      return;
+    }
+
+    if (!articleLength) {
+      toast.error("Voer een artikel lengte in");
+      return;
+    }
+
+    createArticleMutation.mutate({
+      clientId: selectedClientId,
+      useSurferSEO,
+      surferSEOUrl: useSurferSEO === "with" ? surferSEOUrl : undefined,
+      keywords: useSurferSEO === "without" ? keywords : undefined,
+      internalLinks,
+      articleLength,
+      formality,
+      targetAudience,
+    });
   };
 
   return (
     <div className="min-h-screen p-8">
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-2xl font-bold mb-6">Nieuw Artikel</h1>
+        <Button 
+          variant="ghost" 
+          onClick={() => navigate("/")}
+          className="mb-6"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Terug naar overzicht
+        </Button>
+
+        <h1 className="text-2xl font-bold mb-6">Nieuw artikel maken</h1>
         
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block mb-2">
-              Klant <span className="text-accent">*</span>
-            </label>
+            <Label>Selecteer een klant <span className="text-accent">*</span></Label>
             <Select
               value={selectedClientId}
               onValueChange={setSelectedClientId}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Selecteer een klant" />
+                <SelectValue placeholder="Kies een klant" />
               </SelectTrigger>
               <SelectContent>
                 {clients.map((client) => (
@@ -104,30 +151,123 @@ const CreateArticle = () => {
           </div>
 
           <div>
-            <label className="block mb-2">
-              Titel <span className="text-accent">*</span>
-            </label>
-            <Input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Voer titel in"
+            <Label>Met of zonder SurferSEO?</Label>
+            <RadioGroup
+              value={useSurferSEO}
+              onValueChange={(value: "with" | "without") => setUseSurferSEO(value)}
+              className="flex gap-4 mt-2"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="with" id="with-surfer" />
+                <Label htmlFor="with-surfer">Met SurferSEO</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="without" id="without-surfer" />
+                <Label htmlFor="without-surfer">Zonder SurferSEO</Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          {useSurferSEO === "with" && (
+            <div>
+              <Label>SurferSEO URL <span className="text-accent">*</span></Label>
+              <Textarea
+                value={surferSEOUrl}
+                onChange={(e) => setSurferSEOUrl(e.target.value)}
+                placeholder="Voer SurferSEO URL's in (één per regel)"
+                className="h-24"
+              />
+              <p className="text-sm text-muted-foreground mt-1">
+                Let op: De outline moet al gegenereerd zijn in SurferSEO
+              </p>
+            </div>
+          )}
+
+          {useSurferSEO === "without" && (
+            <div>
+              <Label>Zoekwoorden <span className="text-accent">*</span></Label>
+              <Textarea
+                value={keywords}
+                onChange={(e) => setKeywords(e.target.value)}
+                placeholder="Voer zoekwoorden in (één per regel)"
+                className="h-24"
+              />
+            </div>
+          )}
+
+          <div>
+            <Label>Interne links Beta</Label>
+            <Textarea
+              value={internalLinks}
+              onChange={(e) => setInternalLinks(e.target.value)}
+              placeholder="Dit werkt nog niet zo goed, doe er max 2 per artikel. (Liever helemaal niet gebruiken)"
+              className="h-24"
             />
           </div>
 
           <div>
-            <label className="block mb-2">
-              Content <span className="text-accent">*</span>
-            </label>
-            <Textarea
-              className="h-64"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Voer content in"
-            />
-            <p className="text-sm text-muted-foreground mt-1">
-              Aantal woorden: {content.trim().split(/\s+/).filter(Boolean).length}
-            </p>
+            <Label>Artikel lengte <span className="text-accent">*</span></Label>
+            {useSurferSEO === "with" ? (
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="surfer" id="surfer-length" checked />
+                  <Label htmlFor="surfer-length">Vanuit SurferSEO (AANBEVOLEN)</Label>
+                </div>
+                <Input
+                  type="number"
+                  value={articleLength}
+                  onChange={(e) => setArticleLength(e.target.value)}
+                  placeholder="Of voer zelf een aantal woorden in (300-3000)"
+                  min="300"
+                  max="3000"
+                />
+              </div>
+            ) : (
+              <Input
+                type="number"
+                value={articleLength}
+                onChange={(e) => setArticleLength(e.target.value)}
+                placeholder="Aantal woorden (300-3000)"
+                min="300"
+                max="3000"
+              />
+            )}
+          </div>
+
+          <div>
+            <Label>Je/u vorm <span className="text-accent">*</span></Label>
+            <RadioGroup
+              value={formality}
+              onValueChange={(value: "je" | "u") => setFormality(value)}
+              className="flex gap-4 mt-2"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="je" id="je-form" />
+                <Label htmlFor="je-form">Je vorm</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="u" id="u-form" />
+                <Label htmlFor="u-form">U vorm</Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          <div>
+            <Label>Doelgroep <span className="text-accent">*</span></Label>
+            <RadioGroup
+              value={targetAudience}
+              onValueChange={(value: "business" | "consumer") => setTargetAudience(value)}
+              className="flex gap-4 mt-2"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="business" id="business" />
+                <Label htmlFor="business">Bedrijven</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="consumer" id="consumer" />
+                <Label htmlFor="consumer">Consumenten</Label>
+              </div>
+            </RadioGroup>
           </div>
 
           <Button
@@ -135,7 +275,7 @@ const CreateArticle = () => {
             className="w-full"
             disabled={createArticleMutation.isPending}
           >
-            {createArticleMutation.isPending ? "Bezig met aanmaken..." : "Artikel Aanmaken"}
+            {createArticleMutation.isPending ? "Bezig met genereren..." : "Genereren"}
           </Button>
         </form>
       </div>
