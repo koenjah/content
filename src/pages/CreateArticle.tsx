@@ -18,6 +18,8 @@ import { SurferSeoToggle } from "@/components/article/SurferSeoToggle";
 import { FormalityToggle } from "@/components/article/FormalityToggle";
 import { TargetAudienceToggle } from "@/components/article/TargetAudienceToggle";
 import { ArticleLengthInput } from "@/components/article/ArticleLengthInput";
+import { startArticleGeneration } from "@/services/articleGeneration";
+import { ArticleGenerationStatus } from "@/components/article/ArticleGenerationStatus";
 
 const CreateArticle = () => {
   const navigate = useNavigate();
@@ -29,6 +31,7 @@ const CreateArticle = () => {
   const [articleLength, setArticleLength] = useState("");
   const [formality, setFormality] = useState<"je" | "u">("je");
   const [targetAudience, setTargetAudience] = useState<"business" | "consumer">("business");
+  const [generationJobId, setGenerationJobId] = useState<string | null>(null);
 
   const { data: clients = [], isLoading: isLoadingClients } = useQuery({
     queryKey: ["clients"],
@@ -40,47 +43,43 @@ const CreateArticle = () => {
       
       if (error) throw error;
       return data;
-    },
-    meta: {
-      onError: (error: Error) => {
-        toast.error("Error loading clients: " + error.message);
-      }
     }
   });
 
-  const createArticleMutation = useMutation({
-    mutationFn: async (formData: {
-      clientId: string;
-      useSurferSEO: "with" | "without";
-      surferSEOUrl?: string;
-      keywords?: string;
-      internalLinks: string;
-      articleLength: string;
-      formality: "je" | "u";
-      targetAudience: "business" | "consumer";
-    }) => {
+  const { data: selectedClient } = useQuery({
+    queryKey: ["client", selectedClientId],
+    queryFn: async () => {
+      if (!selectedClientId) return null;
+      
       const { data, error } = await supabase
-        .from("articles")
-        .insert([
-          {
-            client_id: formData.clientId,
-            content: "", // This will be filled by the AI later
-            title: "", // This will be filled by the AI later
-            word_count: parseInt(formData.articleLength) || 0,
-          }
-        ])
-        .select()
+        .from("clients")
+        .select("*")
+        .eq("id", selectedClientId)
         .single();
-
+      
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      toast.success("Artikel wordt gegenereerd!");
-      navigate("/");
+    enabled: !!selectedClientId
+  });
+
+  const generateArticleMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedClient) throw new Error("Geen client geselecteerd");
+
+      const jobId = await startArticleGeneration({
+        dataset: selectedClient.dataset || "",
+        keyword: keywords,
+        intern: internalLinks,
+        doelgroep: targetAudience,
+        schrijfstijl: formality,
+        words: articleLength
+      });
+
+      setGenerationJobId(jobId);
     },
     onError: (error) => {
-      toast.error("Error creating article: " + error.message);
+      toast.error("Error starting article generation: " + error.message);
     }
   });
 
@@ -107,17 +106,18 @@ const CreateArticle = () => {
       }
     }
 
-    createArticleMutation.mutate({
-      clientId: selectedClientId,
-      useSurferSEO,
-      surferSEOUrl: useSurferSEO === "with" ? surferSEOUrl : undefined,
-      keywords: useSurferSEO === "without" ? keywords : undefined,
-      internalLinks,
-      articleLength,
-      formality,
-      targetAudience,
-    });
+    generateArticleMutation.mutate();
   };
+
+  if (generationJobId) {
+    return (
+      <ArticleGenerationStatus 
+        jobId={generationJobId}
+        clientId={selectedClientId}
+        onComplete={() => navigate("/")}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen p-8">
@@ -204,9 +204,9 @@ const CreateArticle = () => {
           <Button
             type="submit"
             className="w-full"
-            disabled={createArticleMutation.isPending}
+            disabled={generateArticleMutation.isPending}
           >
-            {createArticleMutation.isPending ? "Bezig met genereren..." : "Genereren"}
+            {generateArticleMutation.isPending ? "Bezig met genereren..." : "Genereren"}
           </Button>
         </form>
       </div>
