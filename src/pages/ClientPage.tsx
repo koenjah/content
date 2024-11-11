@@ -22,8 +22,10 @@ const ClientPage = () => {
       if (error) throw error;
       return data;
     },
-    onError: (error) => {
-      toast.error("Error loading client: " + error.message);
+    meta: {
+      onError: (error: Error) => {
+        toast.error("Error loading client: " + error.message);
+      }
     }
   });
 
@@ -39,8 +41,10 @@ const ClientPage = () => {
       if (error) throw error;
       return data;
     },
-    onError: (error) => {
-      toast.error("Error loading articles: " + error.message);
+    meta: {
+      onError: (error: Error) => {
+        toast.error("Error loading articles: " + error.message);
+      }
     }
   });
 

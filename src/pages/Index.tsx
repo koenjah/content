@@ -19,8 +19,10 @@ const Index = () => {
       if (error) throw error;
       return data;
     },
-    onError: (error) => {
-      toast.error("Error loading clients: " + error.message);
+    meta: {
+      onError: (error: Error) => {
+        toast.error("Error loading clients: " + error.message);
+      }
     }
   });
 
@@ -44,8 +46,10 @@ const Index = () => {
       if (error) throw error;
       return data;
     },
-    onError: (error) => {
-      toast.error("Error loading articles: " + error.message);
+    meta: {
+      onError: (error: Error) => {
+        toast.error("Error loading articles: " + error.message);
+      }
     }
   });
 
