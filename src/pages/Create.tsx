@@ -2,24 +2,17 @@ import React, { useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-const writingStyles = [
-  { id: 'dataset', label: 'Vanuit de dataset (AANBEVOLEN)', recommended: true },
-  { id: 'informal', label: 'Informeel' },
-  { id: 'formal', label: 'Formeel' },
-  { id: 'educational', label: 'Educatief' },
-  { id: 'professional', label: 'Professioneel' },
-];
-
 const Create = () => {
-  const [contentType, setContentType] = useState('keyword');
-  const [customDataset, setCustomDataset] = useState('');
+  const [useSurferSEO, setUseSurferSEO] = useState(true);
+  const [articleLength, setArticleLength] = useState('');
+  const [customLength, setCustomLength] = useState('');
 
   return (
     <div className="min-h-screen p-8">
       <div className="max-w-3xl mx-auto">
         <Link to="/" className="flex items-center gap-2 text-accent mb-8">
           <ArrowLeft size={20} />
-          Terug naar dashboard
+          Terug naar overzicht
         </Link>
 
         <div className="bg-card rounded p-6">
@@ -28,81 +21,98 @@ const Create = () => {
           <div className="space-y-6">
             <div>
               <label className="block mb-2">
-                Soort artikel <span className="text-accent">*</span>
+                Selecteer een klant <span className="text-accent">*</span>
               </label>
               <select className="input-field">
-                <option>Blog post</option>
+                <option value="">Kies een klant</option>
               </select>
             </div>
 
             <div>
               <label className="block mb-2">
-                Content type <span className="text-accent">*</span>
+                Met of zonder SurferSEO?
               </label>
               <div className="flex gap-4">
                 <button
                   className={`px-4 py-2 rounded ${
-                    contentType === 'keyword'
-                      ? 'bg-accent text-white'
-                      : 'bg-background'
+                    useSurferSEO ? 'bg-accent text-white' : 'bg-background'
                   }`}
-                  onClick={() => setContentType('keyword')}
+                  onClick={() => setUseSurferSEO(true)}
                 >
-                  Zoekterm
+                  Met SurferSEO
                 </button>
                 <button
                   className={`px-4 py-2 rounded ${
-                    contentType === 'surfer'
-                      ? 'bg-accent text-white'
-                      : 'bg-background'
+                    !useSurferSEO ? 'bg-accent text-white' : 'bg-background'
                   }`}
-                  onClick={() => setContentType('surfer')}
+                  onClick={() => setUseSurferSEO(false)}
                 >
-                  SurferSEO URL
+                  Zonder SurferSEO
                 </button>
               </div>
             </div>
 
-            {contentType === 'keyword' ? (
+            {useSurferSEO ? (
               <div>
                 <label className="block mb-2">
-                  Zoekterm <span className="text-accent">*</span>
+                  SurferSEO URL <span className="text-accent">*</span>
                 </label>
                 <textarea 
                   className="input-field h-32" 
-                  placeholder="Voer één zoekterm per regel in voor bulk generatie"
+                  placeholder="Voer SurferSEO URL's in (één per regel)"
                 />
+                <p className="text-sm text-gray-400 mt-1">
+                  Let op: De outline moet al gegenereerd zijn in SurferSEO
+                </p>
               </div>
             ) : (
               <div>
                 <label className="block mb-2">
-                  SurferSEO URL
+                  Zoekwoorden <span className="text-accent">*</span>
                 </label>
                 <textarea 
                   className="input-field h-32" 
-                  placeholder="Vanuit SurferSEO (AANBEVOLEN)"
+                  placeholder="Voer zoekwoorden in (één per regel)"
                 />
               </div>
             )}
 
             <div>
               <label className="block mb-2">
-                Interne links
+                Interne links Beta
               </label>
-              <input type="text" className="input-field" placeholder="Dit werkt nog niet zo goed, doe er max 2 per artikel" />
+              <input 
+                type="text" 
+                className="input-field" 
+                placeholder="Dit werkt nog niet zo goed, doe er max 2 per artikel. (Liever helemaal niet gebruiken)" 
+              />
             </div>
 
             <div>
               <label className="block mb-2">
                 Artikel lengte <span className="text-accent">*</span>
               </label>
-              {contentType === 'surfer' ? (
-                <input
-                  type="text"
-                  className="input-field"
-                  defaultValue="Vanuit SurferSEO (AANBEVOLEN)"
-                  placeholder="Vanuit SurferSEO (AANBEVOLEN)"
-                />
+              {useSurferSEO ? (
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    className="input-field"
+                    value="Vanuit SurferSEO (AANBEVOLEN)"
+                    readOnly
+                  />
+                  <div>
+                    <label className="text-sm text-gray-400">Of vul een aangepaste lengte in:</label>
+                    <input
+                      type="number"
+                      className="input-field mt-1"
+                      min="300"
+                      max="3000"
+                      placeholder="Aantal woorden (300-3000)"
+                      value={customLength}
+                      onChange={(e) => setCustomLength(e.target.value)}
+                    />
+                  </div>
+                </div>
               ) : (
                 <input
                   type="number"
@@ -110,41 +120,35 @@ const Create = () => {
                   min="300"
                   max="3000"
                   placeholder="Aantal woorden (300-3000)"
+                  value={articleLength}
+                  onChange={(e) => setArticleLength(e.target.value)}
                 />
               )}
             </div>
 
             <div>
               <label className="block mb-2">
-                Schrijfstijl <span className="text-accent">*</span>
+                Je/u vorm <span className="text-accent">*</span>
               </label>
-              <select className="input-field" defaultValue="dataset">
-                {writingStyles.map((style) => (
-                  <option key={style.id} value={style.id}>
-                    {style.label}
-                  </option>
-                ))}
+              <select className="input-field">
+                <option value="je">Je vorm</option>
+                <option value="u">U vorm</option>
               </select>
             </div>
 
             <div>
-              <label className="block mb-2">Custom dataset</label>
-              <textarea
-                className="input-field h-32"
-                placeholder="Wil je een custom dataset gebruiken?"
-                value={customDataset}
-                onChange={(e) => setCustomDataset(e.target.value)}
-              />
+              <label className="block mb-2">
+                Doelgroep <span className="text-accent">*</span>
+              </label>
+              <select className="input-field">
+                <option value="business">Bedrijven</option>
+                <option value="consumer">Consumenten</option>
+              </select>
             </div>
 
-            <div className="flex gap-4">
-              <button className="btn-primary">
-                Artikel genereren
-              </button>
-              <button className="bg-background text-white px-4 py-2 rounded font-medium hover:bg-opacity-90 transition-all">
-                Bulk genereren
-              </button>
-            </div>
+            <button className="btn-primary">
+              Genereren
+            </button>
           </div>
         </div>
       </div>
