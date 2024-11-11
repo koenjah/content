@@ -3,31 +3,42 @@ import { Folder, FileText, Plus, UserPlus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-
-const clients = [
-  "Veldkamp",
-  "Lento Zorg",
-  "Artena",
-  "Unifloor",
-  "Carbify",
-  "Recruitment Now",
-  "Optimaal Groeien"
-];
-
-const recentArticles = [
-  {
-    title: "SEO Optimalisatie voor Beginners",
-    client: "Optimaal Groeien",
-    date: "2024-02-20",
-  },
-  {
-    title: "Duurzame Vloeren in 2024",
-    client: "Unifloor",
-    date: "2024-02-19",
-  },
-];
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 const Index = () => {
+  const { data: clients = [], isLoading: isLoadingClients } = useQuery({
+    queryKey: ['clients'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('clients')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const { data: recentArticles = [], isLoading: isLoadingArticles } = useQuery({
+    queryKey: ['recent-articles'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('articles')
+        .select(`
+          id,
+          title,
+          created_at,
+          clients (
+            name
+          )
+        `)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      if (error) throw error;
+      return data;
+    }
+  });
+
   return (
     <div className="min-h-screen p-8">
       <div className="max-w-7xl mx-auto">
@@ -46,28 +57,34 @@ const Index = () => {
                 <Folder className="text-accent" />
                 Klant Mappen
               </h2>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <UserPlus size={18} className="text-accent" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Nieuwe Klant Toevoegen</p>
-                </TooltipContent>
-              </Tooltip>
+              <Link to="/create">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <UserPlus size={18} className="text-accent" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Nieuwe Klant Toevoegen</p>
+                  </TooltipContent>
+                </Tooltip>
+              </Link>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {clients.map((client) => (
-                <Link
-                  key={client}
-                  to={`/client/${client.toLowerCase().replace(" ", "-")}`}
-                  className="flex items-center gap-2 p-3 bg-background rounded card-hover"
-                >
-                  <Folder size={20} className="text-accent" />
-                  <span>{client}</span>
-                </Link>
-              ))}
+              {isLoadingClients ? (
+                <p>Loading...</p>
+              ) : (
+                clients.map((client) => (
+                  <Link
+                    key={client.id}
+                    to={`/client/${client.id}`}
+                    className="flex items-center gap-2 p-3 bg-background rounded card-hover"
+                  >
+                    <Folder size={20} className="text-accent" />
+                    <span>{client.name}</span>
+                  </Link>
+                ))
+              )}
             </div>
           </div>
 
@@ -77,18 +94,24 @@ const Index = () => {
               Recente Artikelen
             </h2>
             <div className="space-y-4">
-              {recentArticles.map((article, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-3 bg-background rounded card-hover"
-                >
-                  <div>
-                    <h3 className="font-medium">{article.title}</h3>
-                    <p className="text-sm text-gray-400">{article.client}</p>
+              {isLoadingArticles ? (
+                <p>Loading...</p>
+              ) : (
+                recentArticles.map((article) => (
+                  <div
+                    key={article.id}
+                    className="flex items-center justify-between p-3 bg-background rounded card-hover"
+                  >
+                    <div>
+                      <h3 className="font-medium">{article.title}</h3>
+                      <p className="text-sm text-gray-400">{article.clients?.name}</p>
+                    </div>
+                    <span className="text-sm text-gray-400">
+                      {new Date(article.created_at).toLocaleDateString()}
+                    </span>
                   </div>
-                  <span className="text-sm text-gray-400">{article.date}</span>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </div>

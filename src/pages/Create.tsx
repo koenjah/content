@@ -1,11 +1,43 @@
 import React, { useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useMutation } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const Create = () => {
-  const [useSurferSEO, setUseSurferSEO] = useState(true);
-  const [articleLength, setArticleLength] = useState('');
-  const [customLength, setCustomLength] = useState('');
+  const [clientName, setClientName] = useState('');
+  const [dataset, setDataset] = useState('');
+  const navigate = useNavigate();
+
+  const createClientMutation = useMutation({
+    mutationFn: async ({ name, dataset }: { name: string; dataset: string }) => {
+      const { data, error } = await supabase
+        .from('clients')
+        .insert([{ name, dataset }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success("Client created successfully!");
+      navigate(`/client/${data.id}`);
+    },
+    onError: (error) => {
+      toast.error("Failed to create client: " + error.message);
+    }
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!clientName.trim() || !dataset.trim()) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+    createClientMutation.mutate({ name: clientName, dataset });
+  };
 
   return (
     <div className="min-h-screen p-8">
@@ -16,140 +48,45 @@ const Create = () => {
         </Link>
 
         <div className="bg-card rounded p-6">
-          <h1 className="text-2xl font-bold mb-6">Nieuw artikel maken</h1>
+          <h1 className="text-2xl font-bold mb-6">Nieuwe klant toevoegen</h1>
 
-          <div className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block mb-2">
-                Selecteer een klant <span className="text-accent">*</span>
+                Klantnaam <span className="text-accent">*</span>
               </label>
-              <select className="input-field">
-                <option value="">Kies een klant</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block mb-2">
-                Met of zonder SurferSEO?
-              </label>
-              <div className="flex gap-4">
-                <button
-                  className={`px-4 py-2 rounded ${
-                    useSurferSEO ? 'bg-accent text-white' : 'bg-background'
-                  }`}
-                  onClick={() => setUseSurferSEO(true)}
-                >
-                  Met SurferSEO
-                </button>
-                <button
-                  className={`px-4 py-2 rounded ${
-                    !useSurferSEO ? 'bg-accent text-white' : 'bg-background'
-                  }`}
-                  onClick={() => setUseSurferSEO(false)}
-                >
-                  Zonder SurferSEO
-                </button>
-              </div>
-            </div>
-
-            {useSurferSEO ? (
-              <div>
-                <label className="block mb-2">
-                  SurferSEO URL <span className="text-accent">*</span>
-                </label>
-                <textarea 
-                  className="input-field h-32" 
-                  placeholder="Voer SurferSEO URL's in (één per regel)"
-                />
-                <p className="text-sm text-gray-400 mt-1">
-                  Let op: De outline moet al gegenereerd zijn in SurferSEO
-                </p>
-              </div>
-            ) : (
-              <div>
-                <label className="block mb-2">
-                  Zoekwoorden <span className="text-accent">*</span>
-                </label>
-                <textarea 
-                  className="input-field h-32" 
-                  placeholder="Voer zoekwoorden in (één per regel)"
-                />
-              </div>
-            )}
-
-            <div>
-              <label className="block mb-2">
-                Interne links Beta
-              </label>
-              <input 
-                type="text" 
-                className="input-field" 
-                placeholder="Dit werkt nog niet zo goed, doe er max 2 per artikel. (Liever helemaal niet gebruiken)" 
+              <input
+                type="text"
+                className="input-field w-full"
+                value={clientName}
+                onChange={(e) => setClientName(e.target.value)}
+                placeholder="Voer klantnaam in"
               />
             </div>
 
             <div>
               <label className="block mb-2">
-                Artikel lengte <span className="text-accent">*</span>
+                Dataset <span className="text-accent">*</span>
               </label>
-              {useSurferSEO ? (
-                <div className="space-y-2">
-                  <input
-                    type="text"
-                    className="input-field"
-                    value="Vanuit SurferSEO (AANBEVOLEN)"
-                    readOnly
-                  />
-                  <div>
-                    <label className="text-sm text-gray-400">Of vul een aangepaste lengte in:</label>
-                    <input
-                      type="number"
-                      className="input-field mt-1"
-                      min="300"
-                      max="3000"
-                      placeholder="Aantal woorden (300-3000)"
-                      value={customLength}
-                      onChange={(e) => setCustomLength(e.target.value)}
-                    />
-                  </div>
-                </div>
-              ) : (
-                <input
-                  type="number"
-                  className="input-field"
-                  min="300"
-                  max="3000"
-                  placeholder="Aantal woorden (300-3000)"
-                  value={articleLength}
-                  onChange={(e) => setArticleLength(e.target.value)}
-                />
-              )}
+              <textarea
+                className="input-field w-full h-64"
+                value={dataset}
+                onChange={(e) => setDataset(e.target.value)}
+                placeholder="Voer dataset in (ongeveer 2000 woorden)"
+              />
+              <p className="text-sm text-gray-400 mt-1">
+                Huidige lengte: {dataset.split(/\s+/).filter(Boolean).length} woorden
+              </p>
             </div>
 
-            <div>
-              <label className="block mb-2">
-                Je/u vorm <span className="text-accent">*</span>
-              </label>
-              <select className="input-field">
-                <option value="je">Je vorm</option>
-                <option value="u">U vorm</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block mb-2">
-                Doelgroep <span className="text-accent">*</span>
-              </label>
-              <select className="input-field">
-                <option value="business">Bedrijven</option>
-                <option value="consumer">Consumenten</option>
-              </select>
-            </div>
-
-            <button className="btn-primary">
-              Genereren
+            <button
+              type="submit"
+              className="btn-primary w-full"
+              disabled={createClientMutation.isPending}
+            >
+              {createClientMutation.isPending ? "Bezig met aanmaken..." : "Klant Aanmaken"}
             </button>
-          </div>
+          </form>
         </div>
       </div>
     </div>
