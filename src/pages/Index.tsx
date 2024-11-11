@@ -7,6 +7,16 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+interface Article {
+  id: string;
+  title: string;
+  created_at: string;
+  word_count: number;
+  clients: {
+    name: string;
+  };
+}
+
 const Index = () => {
   const { data: clients = [], isLoading: isLoadingClients } = useQuery({
     queryKey: ['clients'],
@@ -26,7 +36,7 @@ const Index = () => {
     }
   });
 
-  const { data: recentArticles = [], isLoading: isLoadingArticles } = useQuery({
+  const { data: recentArticles = [], isLoading: isLoadingArticles } = useQuery<Article[]>({
     queryKey: ['recent-articles'],
     queryFn: async () => {
       const { data, error } = await supabase
