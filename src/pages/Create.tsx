@@ -27,14 +27,18 @@ const Create = () => {
 
           <div className="space-y-6">
             <div>
-              <label className="block mb-2">Soort Artikel</label>
+              <label className="block mb-2">
+                Soort Artikel <span className="text-accent">*</span>
+              </label>
               <select className="input-field">
                 <option>Blog Post</option>
               </select>
             </div>
 
             <div>
-              <label className="block mb-2">Content Type</label>
+              <label className="block mb-2">
+                Content Type <span className="text-accent">*</span>
+              </label>
               <div className="flex gap-4">
                 <button
                   className={`px-4 py-2 rounded ${
@@ -61,35 +65,60 @@ const Create = () => {
 
             {contentType === 'keyword' ? (
               <div>
-                <label className="block mb-2">Zoekterm</label>
-                <input type="text" className="input-field" placeholder="Voer zoekterm in" />
+                <label className="block mb-2">
+                  Zoekterm <span className="text-accent">*</span>
+                </label>
+                <textarea 
+                  className="input-field h-32" 
+                  placeholder="Voer één zoekterm per regel in voor bulk generatie"
+                />
               </div>
             ) : (
               <div>
-                <label className="block mb-2">SurferSEO URL</label>
-                <input type="text" className="input-field" placeholder="Voer SurferSEO URL in" />
+                <label className="block mb-2">
+                  SurferSEO URL <span className="text-accent">*</span>
+                </label>
+                <textarea 
+                  className="input-field h-32" 
+                  placeholder="Voer één SurferSEO URL per regel in voor bulk generatie. Let op: de outline moet al gegenereerd zijn in SurferSEO"
+                />
               </div>
             )}
 
             <div>
-              <label className="block mb-2">Interne Links (Beta - Max 2 per artikel)</label>
+              <label className="block mb-2">
+                Interne Links (Beta - Max 2 per artikel)
+              </label>
               <input type="text" className="input-field" placeholder="Dit werkt nog niet zo goed, doe er max 2 per artikel" />
             </div>
 
             <div>
-              <label className="block mb-2">Artikel Lengte</label>
-              <input
-                type="number"
-                className="input-field"
-                min="300"
-                max="3000"
-                placeholder="Aantal woorden (300-3000)"
-              />
+              <label className="block mb-2">
+                Artikel Lengte <span className="text-accent">*</span>
+              </label>
+              {contentType === 'surfer' ? (
+                <input
+                  type="text"
+                  className="input-field"
+                  defaultValue="Door SurferSEO aangegeven"
+                  placeholder="Aangepaste lengte (300-3000 woorden)"
+                />
+              ) : (
+                <input
+                  type="number"
+                  className="input-field"
+                  min="300"
+                  max="3000"
+                  placeholder="Aantal woorden (300-3000)"
+                />
+              )}
             </div>
 
             <div>
-              <label className="block mb-2">Schrijfstijl</label>
-              <select className="input-field">
+              <label className="block mb-2">
+                Schrijfstijl <span className="text-accent">*</span>
+              </label>
+              <select className="input-field" defaultValue="dataset">
                 {writingStyles.map((style) => (
                   <option key={style.id} value={style.id}>
                     {style.label}
