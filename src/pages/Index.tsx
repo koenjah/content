@@ -6,19 +6,17 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { Database } from '@/integrations/supabase/types';
 
-interface Article {
-  id: string;
-  title: string;
-  created_at: string;
-  word_count: number;
+type Client = Database['public']['Tables']['clients']['Row'];
+type Article = Database['public']['Tables']['articles']['Row'] & {
   clients: {
     name: string;
   };
-}
+};
 
 const Index = () => {
-  const { data: clients = [], isLoading: isLoadingClients } = useQuery({
+  const { data: clients = [], isLoading: isLoadingClients } = useQuery<Client[]>({
     queryKey: ['clients'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -54,7 +52,7 @@ const Index = () => {
         .limit(5);
       
       if (error) throw error;
-      return data;
+      return data as Article[];
     },
     meta: {
       onError: (error: Error) => {
