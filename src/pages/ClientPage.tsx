@@ -3,37 +3,54 @@ import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Edit2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-interface Article {
-  title: string;
-  date: string;
-  wordCount: number;
-}
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const ClientPage = () => {
   const { clientId } = useParams();
-  const clientName = clientId?.split('-').map(word => 
-    word.charAt(0).toUpperCase() + word.slice(1)
-  ).join(' ');
 
-  // Example data - in real app this would come from an API
-  const articles: Article[] = [
-    {
-      title: "De Impact van Digitalisering op Zorgprocessen",
-      date: "2024-02-25",
-      wordCount: 1200
+  const { data: client, isLoading: isLoadingClient } = useQuery({
+    queryKey: ['client', clientId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('id', clientId)
+        .single();
+
+      if (error) throw error;
+      return data;
     },
-    {
-      title: "Innovatie in de Zorgsector: Een Overzicht",
-      date: "2024-02-20",
-      wordCount: 1500
-    },
-    {
-      title: "Best Practices voor Zorgmanagement",
-      date: "2024-02-15",
-      wordCount: 1800
+    onError: (error) => {
+      toast.error("Error loading client: " + error.message);
     }
-  ];
+  });
+
+  const { data: articles = [], isLoading: isLoadingArticles } = useQuery({
+    queryKey: ['articles', clientId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('articles')
+        .select('*')
+        .eq('client_id', clientId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+    onError: (error) => {
+      toast.error("Error loading articles: " + error.message);
+    }
+  });
+
+  if (isLoadingClient) {
+    return <div className="p-8">Loading client...</div>;
+  }
+
+  if (!client) {
+    return <div className="p-8">Client not found</div>;
+  }
 
   return (
     <div className="min-h-screen p-8">
@@ -44,7 +61,7 @@ const ClientPage = () => {
         </Link>
 
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-white">{clientName}</h1>
+          <h1 className="text-3xl font-bold text-white">{client.name}</h1>
           <Button variant="outline" className="flex items-center gap-2">
             <Edit2 size={16} />
             Dataset Bewerken
@@ -56,20 +73,31 @@ const ClientPage = () => {
             <CardTitle>Recente Artikelen</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {articles.map((article, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-4 bg-background rounded-lg hover:bg-opacity-80 transition-all"
-                >
-                  <div>
-                    <h3 className="font-medium">{article.title}</h3>
-                    <p className="text-sm text-gray-400">Gepubliceerd op: {article.date}</p>
+            {isLoadingArticles ? (
+              <div>Loading articles...</div>
+            ) : (
+              <div className="space-y-4">
+                {articles.map((article) => (
+                  <div
+                    key={article.id}
+                    className="flex items-center justify-between p-4 bg-background rounded-lg hover:bg-opacity-80 transition-all"
+                  >
+                    <div>
+                      <h3 className="font-medium">{article.title}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Gepubliceerd op: {new Date(article.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <span className="text-sm text-accent">{article.word_count} woorden</span>
                   </div>
-                  <span className="text-sm text-accent">{article.wordCount} woorden</span>
-                </div>
-              ))}
-            </div>
+                ))}
+                {articles.length === 0 && (
+                  <p className="text-muted-foreground text-center py-4">
+                    Nog geen artikelen voor deze klant
+                  </p>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
