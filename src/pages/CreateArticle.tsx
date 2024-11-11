@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
@@ -18,6 +17,7 @@ import { ArrowLeft } from "lucide-react";
 import { SurferSeoToggle } from "@/components/article/SurferSeoToggle";
 import { FormalityToggle } from "@/components/article/FormalityToggle";
 import { TargetAudienceToggle } from "@/components/article/TargetAudienceToggle";
+import { ArticleLengthInput } from "@/components/article/ArticleLengthInput";
 
 const CreateArticle = () => {
   const navigate = useNavigate();
@@ -191,32 +191,11 @@ const CreateArticle = () => {
             />
           </div>
 
-          <div>
-            <Label>Artikel lengte <span className="text-accent">*</span></Label>
-            {useSurferSEO === "with" ? (
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Input
-                    type="number"
-                    value={articleLength}
-                    onChange={(e) => setArticleLength(e.target.value)}
-                    placeholder="Of voer zelf een aantal woorden in (300-3000)"
-                    min="300"
-                    max="3000"
-                  />
-                </div>
-              </div>
-            ) : (
-              <Input
-                type="number"
-                value={articleLength}
-                onChange={(e) => setArticleLength(e.target.value)}
-                placeholder="Aantal woorden (300-3000)"
-                min="300"
-                max="3000"
-              />
-            )}
-          </div>
+          <ArticleLengthInput 
+            useSurferSEO={useSurferSEO}
+            articleLength={articleLength}
+            onChange={setArticleLength}
+          />
 
           <FormalityToggle value={formality} onValueChange={setFormality} />
           <TargetAudienceToggle value={targetAudience} onValueChange={setTargetAudience} />
