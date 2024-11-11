@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Edit2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ const ClientPage = () => {
   const [dataset, setDataset] = useState('');
   const queryClient = useQueryClient();
 
-  const { data: client, isLoading: isLoadingClient } = useQuery({
+  const { data: client } = useQuery({
     queryKey: ['client', clientId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -26,16 +26,15 @@ const ClientPage = () => {
 
       if (error) throw error;
       return data;
-    },
-    onSuccess: (data) => {
-      setDataset(data.dataset);
-    },
-    meta: {
-      onError: (error: Error) => {
-        toast.error("Error loading client: " + error.message);
-      }
     }
   });
+
+  // Update dataset state when client data is loaded
+  useEffect(() => {
+    if (client?.dataset) {
+      setDataset(client.dataset);
+    }
+  }, [client]);
 
   const { data: articles = [], isLoading: isLoadingArticles } = useQuery({
     queryKey: ['articles', clientId],
@@ -48,11 +47,6 @@ const ClientPage = () => {
 
       if (error) throw error;
       return data;
-    },
-    meta: {
-      onError: (error: Error) => {
-        toast.error("Error loading articles: " + error.message);
-      }
     }
   });
 
@@ -81,10 +75,6 @@ const ClientPage = () => {
   const handleSaveDataset = () => {
     updateDatasetMutation.mutate(dataset);
   };
-
-  if (isLoadingClient) {
-    return <div className="p-8">Loading client...</div>;
-  }
 
   if (!client) {
     return <div className="p-8">Client not found</div>;
