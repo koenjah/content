@@ -23,7 +23,6 @@ const recentArticles = [
     client: "Unifloor",
     date: "2024-02-19",
   },
-  // Add more sample articles as needed
 ];
 
 const Index = () => {
@@ -40,10 +39,15 @@ const Index = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
           <div className="bg-card rounded p-6">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <Folder className="text-accent" />
-              Klant Mappen
-            </h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold flex items-center gap-2">
+                <Folder className="text-accent" />
+                Klant Mappen
+              </h2>
+              <button className="text-accent hover:text-accent/80 transition-colors">
+                <Plus size={20} />
+              </button>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {clients.map((client) => (
                 <Link
