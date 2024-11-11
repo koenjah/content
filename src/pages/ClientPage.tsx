@@ -1,14 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Edit2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useQuery } from '@tanstack/react-query';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 const ClientPage = () => {
   const { clientId } = useParams();
+  const [isEditingDataset, setIsEditingDataset] = useState(false);
+  const [dataset, setDataset] = useState('');
+  const queryClient = useQueryClient();
 
   const { data: client, isLoading: isLoadingClient } = useQuery({
     queryKey: ['client', clientId],
@@ -21,6 +26,9 @@ const ClientPage = () => {
 
       if (error) throw error;
       return data;
+    },
+    onSuccess: (data) => {
+      setDataset(data.dataset);
     },
     meta: {
       onError: (error: Error) => {
@@ -48,6 +56,32 @@ const ClientPage = () => {
     }
   });
 
+  const updateDatasetMutation = useMutation({
+    mutationFn: async (newDataset: string) => {
+      const { data, error } = await supabase
+        .from('clients')
+        .update({ dataset: newDataset })
+        .eq('id', clientId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success("Dataset succesvol bijgewerkt");
+      setIsEditingDataset(false);
+      queryClient.invalidateQueries({ queryKey: ['client', clientId] });
+    },
+    onError: (error) => {
+      toast.error("Error updating dataset: " + error.message);
+    }
+  });
+
+  const handleSaveDataset = () => {
+    updateDatasetMutation.mutate(dataset);
+  };
+
   if (isLoadingClient) {
     return <div className="p-8">Loading client...</div>;
   }
@@ -66,11 +100,37 @@ const ClientPage = () => {
 
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-white">{client.name}</h1>
-          <Button variant="outline" className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            className="flex items-center gap-2"
+            onClick={() => setIsEditingDataset(true)}
+          >
             <Edit2 size={16} />
             Dataset Bewerken
           </Button>
         </div>
+
+        <Dialog open={isEditingDataset} onOpenChange={setIsEditingDataset}>
+          <DialogContent className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>Dataset Bewerken</DialogTitle>
+            </DialogHeader>
+            <Textarea
+              value={dataset}
+              onChange={(e) => setDataset(e.target.value)}
+              className="min-h-[400px]"
+              placeholder="Voer dataset in (ongeveer 2000 woorden)"
+            />
+            <DialogFooter className="mt-4">
+              <Button variant="outline" onClick={() => setIsEditingDataset(false)}>
+                Annuleren
+              </Button>
+              <Button onClick={handleSaveDataset} disabled={updateDatasetMutation.isPending}>
+                {updateDatasetMutation.isPending ? "Bezig met opslaan..." : "Opslaan"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <Card>
           <CardHeader>
