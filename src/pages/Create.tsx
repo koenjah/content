@@ -58,7 +58,7 @@ const Create = () => {
                   }`}
                   onClick={() => setContentType('surfer')}
                 >
-                  Surferseo url
+                  SurferSEO URL
                 </button>
               </div>
             </div>
@@ -76,11 +76,11 @@ const Create = () => {
             ) : (
               <div>
                 <label className="block mb-2">
-                  Surferseo url <span className="text-accent">*</span>
+                  SurferSEO URL
                 </label>
                 <textarea 
                   className="input-field h-32" 
-                  placeholder="Voer één SurferSEO URL per regel in voor bulk generatie. Let op: de outline moet al gegenereerd zijn in SurferSEO"
+                  placeholder="Vanuit SurferSEO (AANBEVOLEN)"
                 />
               </div>
             )}
