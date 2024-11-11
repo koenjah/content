@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import { checkArticleStatus } from "@/services/articleGeneration";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ArticleGenerationStatusProps {
   jobIds: string[];
@@ -15,61 +17,56 @@ export const ArticleGenerationStatus = ({ jobIds, clientId, onComplete }: Articl
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Register service worker
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/articleWorker.js')
-        .then((registration) => {
-          console.log('Service Worker registered:', registration);
-          
-          // Start checking articles
-          registration.active?.postMessage({
-            type: 'CHECK_ARTICLES',
-            jobIds,
-            clientId
-          });
+    const checkAllJobs = async () => {
+      try {
+        const results = await Promise.all(
+          jobIds.map(async (jobId) => {
+            const response = await checkArticleStatus(jobId);
+            return { jobId, response };
+          })
+        );
 
-          // Listen for messages from service worker
-          navigator.serviceWorker.addEventListener('message', (event) => {
-            if (event.data.type === 'ARTICLE_COMPLETE') {
-              const { jobId, success } = event.data;
-              if (success) {
-                setCompletedJobs(prev => [...prev, jobId]);
-                toast.success(`Artikel ${completedJobs.length + 1}/${jobIds.length} succesvol gegenereerd!`);
-              } else {
-                setFailedJobs(prev => [...prev, jobId]);
-                toast.error(`Artikel generatie mislukt voor job ${jobId}`);
-              }
-            }
-          });
-        })
-        .catch((error) => {
-          console.error('Service Worker registration failed:', error);
-          toast.error("Er is een fout opgetreden bij het starten van de artikel generatie");
-        });
-    } else {
-      toast.error("Je browser ondersteunt geen service workers. De pagina moet open blijven tijdens het genereren.");
-    }
+        for (const { jobId, response } of results) {
+          if (response.type === "complete" && !completedJobs.includes(jobId)) {
+            // Store the article in Supabase
+            const { error } = await supabase.from("articles").insert({
+              client_id: clientId,
+              content: response.output,
+              title: "Nieuw Artikel",
+              word_count: response.output.split(" ").length
+            });
 
-    // Cleanup
-    return () => {
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(registrations => {
-          registrations.forEach(registration => registration.unregister());
-        });
+            if (error) throw error;
+            
+            setCompletedJobs(prev => [...prev, jobId]);
+            toast.success(`Artikel ${completedJobs.length + 1}/${jobIds.length} succesvol gegenereerd!`);
+          } else if (response.type === "failed" && !failedJobs.includes(jobId)) {
+            setFailedJobs(prev => [...prev, jobId]);
+            toast.error(`Artikel generatie mislukt voor job ${jobId}`);
+          }
+        }
+
+        // Check if all jobs are completed or failed
+        const allJobsProcessed = results.every(
+          ({ jobId }) => completedJobs.includes(jobId) || failedJobs.includes(jobId)
+        );
+
+        if (allJobsProcessed) {
+          if (failedJobs.length === 0) {
+            onComplete();
+          }
+        } else {
+          // Check again in 10 seconds if not all jobs are processed
+          setTimeout(checkAllJobs, 10000);
+        }
+      } catch (error) {
+        console.error("Error checking article status:", error);
+        toast.error("Er is een fout opgetreden bij het controleren van de artikel status");
       }
     };
-  }, [jobIds, clientId]);
 
-  // Check if all jobs are complete
-  useEffect(() => {
-    const allJobsProcessed = jobIds.every(
-      jobId => completedJobs.includes(jobId) || failedJobs.includes(jobId)
-    );
-
-    if (allJobsProcessed && failedJobs.length === 0) {
-      onComplete();
-    }
-  }, [completedJobs, failedJobs, jobIds, onComplete]);
+    checkAllJobs();
+  }, [jobIds, clientId, completedJobs, failedJobs, onComplete]);
 
   if (completedJobs.length < jobIds.length && failedJobs.length < jobIds.length) {
     return (
@@ -79,7 +76,7 @@ export const ArticleGenerationStatus = ({ jobIds, clientId, onComplete }: Articl
           Artikelen worden gegenereerd... ({completedJobs.length}/{jobIds.length} voltooid)
         </p>
         <p className="text-sm text-muted-foreground mt-2">
-          Je kunt deze pagina nu sluiten. Je krijgt een notificatie wanneer de artikelen klaar zijn.
+          Dit kan tot 20 minuten per artikel duren.
         </p>
       </div>
     );
