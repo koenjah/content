@@ -6,40 +6,58 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 interface ArticleGenerationStatusProps {
-  jobId: string;
+  jobIds: string[];
   clientId: string;
   onComplete: () => void;
 }
 
-export const ArticleGenerationStatus = ({ jobId, clientId, onComplete }: ArticleGenerationStatusProps) => {
-  const [status, setStatus] = useState<"pending" | "complete" | "failed">("pending");
+export const ArticleGenerationStatus = ({ jobIds, clientId, onComplete }: ArticleGenerationStatusProps) => {
+  const [completedJobs, setCompletedJobs] = useState<string[]>([]);
+  const [failedJobs, setFailedJobs] = useState<string[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const checkStatus = async () => {
+    const checkAllJobs = async () => {
       try {
-        const response = await checkArticleStatus(jobId);
-        
-        if (response.type === "complete") {
-          // Store the article in Supabase
-          const { error } = await supabase.from("articles").insert({
-            client_id: clientId,
-            content: response.output,
-            title: "Nieuw Artikel", // You might want to extract this from the content
-            word_count: response.output.split(" ").length
-          });
+        const results = await Promise.all(
+          jobIds.map(async (jobId) => {
+            const response = await checkArticleStatus(jobId);
+            return { jobId, response };
+          })
+        );
 
-          if (error) throw error;
-          
-          setStatus("complete");
-          toast.success("Artikel succesvol gegenereerd!");
-          onComplete();
-        } else if (response.type === "failed") {
-          setStatus("failed");
-          toast.error("Artikel generatie mislukt");
+        for (const { jobId, response } of results) {
+          if (response.type === "complete" && !completedJobs.includes(jobId)) {
+            // Store the article in Supabase
+            const { error } = await supabase.from("articles").insert({
+              client_id: clientId,
+              content: response.output,
+              title: "Nieuw Artikel",
+              word_count: response.output.split(" ").length
+            });
+
+            if (error) throw error;
+            
+            setCompletedJobs(prev => [...prev, jobId]);
+            toast.success(`Artikel ${completedJobs.length + 1}/${jobIds.length} succesvol gegenereerd!`);
+          } else if (response.type === "failed" && !failedJobs.includes(jobId)) {
+            setFailedJobs(prev => [...prev, jobId]);
+            toast.error(`Artikel generatie mislukt voor job ${jobId}`);
+          }
+        }
+
+        // Check if all jobs are completed or failed
+        const allJobsProcessed = results.every(
+          ({ jobId }) => completedJobs.includes(jobId) || failedJobs.includes(jobId)
+        );
+
+        if (allJobsProcessed) {
+          if (failedJobs.length === 0) {
+            onComplete();
+          }
         } else {
-          // Check again in 10 seconds
-          setTimeout(checkStatus, 10000);
+          // Check again in 10 seconds if not all jobs are processed
+          setTimeout(checkAllJobs, 10000);
         }
       } catch (error) {
         console.error("Error checking article status:", error);
@@ -47,24 +65,31 @@ export const ArticleGenerationStatus = ({ jobId, clientId, onComplete }: Article
       }
     };
 
-    checkStatus();
-  }, [jobId, clientId, onComplete]);
+    checkAllJobs();
+  }, [jobIds, clientId, completedJobs, failedJobs, onComplete]);
 
-  if (status === "pending") {
+  if (completedJobs.length < jobIds.length && failedJobs.length < jobIds.length) {
     return (
       <div className="text-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent mx-auto mb-4"></div>
         <p className="text-muted-foreground">
-          Artikel wordt gegenereerd... Dit kan tot 20 minuten duren.
+          Artikelen worden gegenereerd... ({completedJobs.length}/{jobIds.length} voltooid)
+        </p>
+        <p className="text-sm text-muted-foreground mt-2">
+          Dit kan tot 20 minuten per artikel duren.
         </p>
       </div>
     );
   }
 
-  if (status === "failed") {
+  if (failedJobs.length > 0) {
     return (
       <div className="text-center py-8">
-        <p className="text-destructive mb-4">Artikel generatie is mislukt</p>
+        <p className="text-destructive mb-4">
+          {failedJobs.length === jobIds.length 
+            ? "Alle artikel generaties zijn mislukt"
+            : `${failedJobs.length} artikel(en) zijn mislukt, ${completedJobs.length} succesvol gegenereerd`}
+        </p>
         <Button variant="outline" onClick={() => navigate("/")}>
           Terug naar dashboard
         </Button>
