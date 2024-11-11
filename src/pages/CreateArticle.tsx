@@ -96,14 +96,15 @@ const CreateArticle = () => {
       return;
     }
 
-    if (useSurferSEO === "without" && !keywords) {
-      toast.error("Voer zoekwoorden in");
-      return;
-    }
-
-    if (!articleLength) {
-      toast.error("Voer een artikel lengte in");
-      return;
+    if (useSurferSEO === "without") {
+      if (!keywords) {
+        toast.error("Voer zoekwoorden in");
+        return;
+      }
+      if (!articleLength) {
+        toast.error("Voer een artikel lengte in");
+        return;
+      }
     }
 
     createArticleMutation.mutate({

@@ -14,7 +14,7 @@ export const ArticleLengthInput = ({
 }: ArticleLengthInputProps) => {
   return (
     <div>
-      <Label>Artikel lengte <span className="text-accent">*</span></Label>
+      <Label>Artikel lengte{useSurferSEO === "without" && <span className="text-accent">*</span>}</Label>
       {useSurferSEO === "with" ? (
         <div className="space-y-2">
           <div className="flex items-center space-x-2">
@@ -36,6 +36,7 @@ export const ArticleLengthInput = ({
           placeholder="Aantal woorden (300-3000)"
           min="300"
           max="3000"
+          required
         />
       )}
     </div>
