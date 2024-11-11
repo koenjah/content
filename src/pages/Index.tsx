@@ -73,7 +73,7 @@ const Index = () => {
                 <Folder className="text-accent" />
                 Klant Mappen
               </h2>
-              <Link to="/create">
+              <Link to="/create-client">
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-8 w-8">
