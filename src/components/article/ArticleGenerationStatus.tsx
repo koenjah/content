@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
 
 interface ArticleGenerationStatusProps {
   jobIds: string[];
@@ -29,40 +28,52 @@ export const ArticleGenerationStatus = ({ jobIds, clientId, onComplete }: Articl
 
         for (const { jobId, response } of results) {
           if (response.type === "complete" && !completedJobs.includes(jobId)) {
-            // Get job info from database
-            const { data: jobData } = await supabase
+            // Get existing job to prevent duplicate articles
+            const { data: existingJob } = await supabase
               .from('article_jobs')
-              .select()
+              .select('completed, article_id')
               .eq('job_id', jobId)
               .single();
 
-            if (!jobData?.completed) {
-              // Store the article in Supabase
-              const { data: article } = await supabase
+            // Only create article if not already done
+            if (!existingJob?.completed) {
+              // Create the article
+              const { data: article, error: articleError } = await supabase
                 .from('articles')
                 .insert({
                   client_id: clientId,
                   content: response.output,
                   title: "Nieuw Artikel",
-                  word_count: response.output.split(" ").length
+                  word_count: response.output.split(/\s+/).filter(Boolean).length
                 })
                 .select()
                 .single();
 
+              if (articleError) {
+                console.error("Error creating article:", articleError);
+                setFailedJobs(prev => [...prev, jobId]);
+                continue;
+              }
+
               if (article) {
-                // Update job as completed
-                await supabase
+                // Update job as completed with article reference
+                const { error: updateError } = await supabase
                   .from('article_jobs')
                   .update({ 
                     completed: true,
                     article_id: article.id 
                   })
                   .eq('job_id', jobId);
+
+                if (updateError) {
+                  console.error("Error updating job:", updateError);
+                  continue;
+                }
+
+                setCompletedJobs(prev => [...prev, jobId]);
+                toast.success(`Artikel ${completedJobs.length + 1}/${jobIds.length} succesvol gegenereerd!`);
               }
             }
-            
-            setCompletedJobs(prev => [...prev, jobId]);
-            toast.success(`Artikel ${completedJobs.length + 1}/${jobIds.length} succesvol gegenereerd!`);
           } else if (response.type === "failed" && !failedJobs.includes(jobId)) {
             setFailedJobs(prev => [...prev, jobId]);
             toast.error(`Artikel generatie mislukt voor job ${jobId}`);
