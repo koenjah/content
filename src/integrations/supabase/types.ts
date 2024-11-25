@@ -35,6 +35,35 @@ export interface Database {
           word_count?: number
         }
       }
+      article_jobs: {
+        Row: {
+          id: string
+          created_at: string
+          client_id: string
+          job_id: string
+          settings: Json
+          completed: boolean
+          article_id: string | null
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          client_id: string
+          job_id: string
+          settings: Json
+          completed?: boolean
+          article_id?: string | null
+        }
+        Update: {
+          id?: string
+          created_at?: string
+          client_id?: string
+          job_id?: string
+          settings?: Json
+          completed?: boolean
+          article_id?: string | null
+        }
+      }
       clients: {
         Row: {
           id: string

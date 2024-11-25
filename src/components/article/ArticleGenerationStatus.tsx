@@ -28,15 +28,37 @@ export const ArticleGenerationStatus = ({ jobIds, clientId, onComplete }: Articl
 
         for (const { jobId, response } of results) {
           if (response.type === "complete" && !completedJobs.includes(jobId)) {
-            // Store the article in Supabase
-            const { error } = await supabase.from("articles").insert({
-              client_id: clientId,
-              content: response.output,
-              title: "Nieuw Artikel",
-              word_count: response.output.split(" ").length
-            });
+            // Get job info from database
+            const { data: jobData } = await supabase
+              .from("article_jobs")
+              .select()
+              .eq("job_id", jobId)
+              .single();
 
-            if (error) throw error;
+            if (!jobData?.completed) {
+              // Store the article in Supabase
+              const { data: article } = await supabase
+                .from("articles")
+                .insert({
+                  client_id: clientId,
+                  content: response.output,
+                  title: "Nieuw Artikel",
+                  word_count: response.output.split(" ").length
+                })
+                .select()
+                .single();
+
+              if (article) {
+                // Update job as completed
+                await supabase
+                  .from("article_jobs")
+                  .update({ 
+                    completed: true,
+                    article_id: article.id 
+                  })
+                  .eq("job_id", jobId);
+              }
+            }
             
             setCompletedJobs(prev => [...prev, jobId]);
             toast.success(`Artikel ${completedJobs.length + 1}/${jobIds.length} succesvol gegenereerd!`);
@@ -77,6 +99,7 @@ export const ArticleGenerationStatus = ({ jobIds, clientId, onComplete }: Articl
         </p>
         <p className="text-sm text-muted-foreground mt-2">
           Dit kan tot 20 minuten per artikel duren.
+          Je kunt dit venster sluiten, de artikelen worden op de achtergrond gegenereerd.
         </p>
       </div>
     );
