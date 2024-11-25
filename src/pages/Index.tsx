@@ -10,7 +10,7 @@ import { Database } from '@/integrations/supabase/types';
 
 type Client = Database['public']['Tables']['clients']['Row'];
 type Article = Database['public']['Tables']['articles']['Row'] & {
-  clients: Pick<Client, 'name'>;
+  clients: Client;
 };
 
 const Index = () => {
@@ -39,20 +39,13 @@ const Index = () => {
         .from('articles')
         .select(`
           *,
-          clients:client_id (
-            name
-          )
+          clients:client_id (*)
         `)
         .order('created_at', { ascending: false })
         .limit(5);
       
       if (error) throw error;
-      
-      // Transform the data to match our Article type
-      return (data || []).map(article => ({
-        ...article,
-        clients: article.clients as Pick<Client, 'name'>
-      }));
+      return data as Article[];
     },
     meta: {
       onError: (error: Error) => {
