@@ -5,18 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
 
 type Client = Database['public']['Tables']['clients']['Row'];
 type Article = Database['public']['Tables']['articles']['Row'];
 
-// Define the type for the joined article with client data
-type ArticleWithClient = Article & {
+// Define a more precise type for the joined data
+interface ArticleWithClient extends Article {
   clients: {
     name: string;
   } | null;
-};
+}
 
 const Index = () => {
   // Fetch clients with proper error handling
@@ -37,14 +36,14 @@ const Index = () => {
   });
 
   // Fetch recent articles with client info
-  const { data: recentArticles = [], isLoading: isLoadingArticles } = useQuery<ArticleWithClient[]>({
+  const { data: recentArticles = [], isLoading: isLoadingArticles } = useQuery({
     queryKey: ['recent-articles'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('articles')
         .select(`
           *,
-          clients:client_id (
+          clients (
             name
           )
         `)
@@ -55,7 +54,9 @@ const Index = () => {
         console.error('Error fetching articles:', error);
         throw error;
       }
-      return data;
+
+      // Ensure the data matches our expected type
+      return (data || []) as ArticleWithClient[];
     }
   });
 
