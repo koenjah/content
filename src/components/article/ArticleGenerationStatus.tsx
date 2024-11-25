@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 
 interface ArticleGenerationStatusProps {
   jobIds: string[];
@@ -30,15 +31,15 @@ export const ArticleGenerationStatus = ({ jobIds, clientId, onComplete }: Articl
           if (response.type === "complete" && !completedJobs.includes(jobId)) {
             // Get job info from database
             const { data: jobData } = await supabase
-              .from("article_jobs")
+              .from('article_jobs')
               .select()
-              .eq("job_id", jobId)
+              .eq('job_id', jobId)
               .single();
 
             if (!jobData?.completed) {
               // Store the article in Supabase
               const { data: article } = await supabase
-                .from("articles")
+                .from('articles')
                 .insert({
                   client_id: clientId,
                   content: response.output,
@@ -51,12 +52,12 @@ export const ArticleGenerationStatus = ({ jobIds, clientId, onComplete }: Articl
               if (article) {
                 // Update job as completed
                 await supabase
-                  .from("article_jobs")
+                  .from('article_jobs')
                   .update({ 
                     completed: true,
                     article_id: article.id 
                   })
-                  .eq("job_id", jobId);
+                  .eq('job_id', jobId);
               }
             }
             

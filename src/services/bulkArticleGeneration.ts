@@ -10,7 +10,7 @@ export const generateArticlesInBulk = async (params: {
   doelgroep: string;
   schrijfstijl: string;
   words: string;
-  clientId: string; // Add clientId parameter
+  clientId: string;
 }) => {
   const keywordList = params.keywords
     .split('\n')
@@ -27,15 +27,17 @@ export const generateArticlesInBulk = async (params: {
     });
     
     // Store job info in database
-    await supabase.from("article_jobs").insert({
-      client_id: params.clientId,
-      job_id: jobId,
-      settings: {
-        ...params,
-        keyword
-      },
-      completed: false
-    });
+    await supabase
+      .from('article_jobs')
+      .insert({
+        client_id: params.clientId,
+        job_id: jobId,
+        settings: {
+          ...params,
+          keyword
+        },
+        completed: false
+      });
     
     jobIds.push(jobId);
 
