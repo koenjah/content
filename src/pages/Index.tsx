@@ -11,6 +11,13 @@ import type { Database } from '@/integrations/supabase/types';
 type Client = Database['public']['Tables']['clients']['Row'];
 type Article = Database['public']['Tables']['articles']['Row'];
 
+// Define the type for the joined article with client data
+type ArticleWithClient = Article & {
+  clients: {
+    name: string;
+  } | null;
+};
+
 const Index = () => {
   // Fetch clients with proper error handling
   const { data: clients = [], isLoading: isLoadingClients } = useQuery({
@@ -30,7 +37,7 @@ const Index = () => {
   });
 
   // Fetch recent articles with client info
-  const { data: recentArticles = [], isLoading: isLoadingArticles } = useQuery({
+  const { data: recentArticles = [], isLoading: isLoadingArticles } = useQuery<ArticleWithClient[]>({
     queryKey: ['recent-articles'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -48,7 +55,7 @@ const Index = () => {
         console.error('Error fetching articles:', error);
         throw error;
       }
-      return data as (Article & { clients: Pick<Client, 'name'> })[];
+      return data;
     }
   });
 
