@@ -10,15 +10,13 @@ import type { Database } from '@/integrations/supabase/types';
 type Client = Database['public']['Tables']['clients']['Row'];
 type Article = Database['public']['Tables']['articles']['Row'];
 
-// Define a more precise type for the joined data
+// Type for joined article data
 interface ArticleWithClient extends Article {
-  clients: {
-    name: string;
-  } | null;
+  client: Pick<Client, 'name'> | null;
 }
 
 const Index = () => {
-  // Fetch clients with proper error handling
+  // Fetch clients for the folders view
   const { data: clients = [], isLoading: isLoadingClients } = useQuery({
     queryKey: ['clients'],
     queryFn: async () => {
@@ -39,13 +37,12 @@ const Index = () => {
   const { data: recentArticles = [], isLoading: isLoadingArticles } = useQuery({
     queryKey: ['recent-articles'],
     queryFn: async () => {
+      // Join articles with clients to get client names
       const { data, error } = await supabase
         .from('articles')
         .select(`
           *,
-          clients (
-            name
-          )
+          client:clients(name)
         `)
         .order('created_at', { ascending: false })
         .limit(5);
@@ -55,7 +52,6 @@ const Index = () => {
         throw error;
       }
 
-      // Ensure the data matches our expected type
       return (data || []) as ArticleWithClient[];
     }
   });
@@ -134,7 +130,7 @@ const Index = () => {
                     <div>
                       <h3 className="font-medium">{article.title}</h3>
                       <p className="text-sm text-muted-foreground">
-                        {article.clients?.name}
+                        {article.client?.name}
                       </p>
                     </div>
                     <div className="text-right">
