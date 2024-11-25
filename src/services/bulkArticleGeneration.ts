@@ -44,7 +44,7 @@ export const generateArticlesInBulk = async (params: {
         clientId: params.clientId
       },
       completed: false,
-      article_id: null // Make article_id nullable in the initial insert
+      article_id: null
     };
 
     await supabase

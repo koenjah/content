@@ -6,15 +6,15 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Database } from '@/integrations/supabase/types';
+import type { Database } from '@/integrations/supabase/types';
 
 type Client = Database['public']['Tables']['clients']['Row'];
 type Article = Database['public']['Tables']['articles']['Row'] & {
-  clients: Client;
+  client: Client;
 };
 
 const Index = () => {
-  const { data: clients = [], isLoading: isLoadingClients } = useQuery<Client[]>({
+  const { data: clients = [], isLoading: isLoadingClients } = useQuery({
     queryKey: ['clients'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -32,20 +32,20 @@ const Index = () => {
     }
   });
 
-  const { data: recentArticles = [], isLoading: isLoadingArticles } = useQuery<Article[]>({
+  const { data: recentArticles = [], isLoading: isLoadingArticles } = useQuery({
     queryKey: ['recent-articles'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('articles')
         .select(`
           *,
-          clients:client_id (*)
+          client:client_id (*)
         `)
         .order('created_at', { ascending: false })
         .limit(5);
       
       if (error) throw error;
-      return data as Article[];
+      return data as unknown as Article[];
     },
     meta: {
       onError: (error: Error) => {
@@ -127,7 +127,9 @@ const Index = () => {
                   >
                     <div>
                       <h3 className="font-medium">{article.title}</h3>
-                      <p className="text-sm text-muted-foreground">{article.clients?.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {article.client?.name}
+                      </p>
                     </div>
                     <div className="text-right">
                       <span className="text-sm text-accent">{article.word_count} woorden</span>
