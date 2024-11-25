@@ -14,6 +14,7 @@ const CreateArticle = () => {
   const [generationJobIds, setGenerationJobIds] = useState<string[]>([]);
   const [currentClientId, setCurrentClientId] = useState<string>("");
 
+  // Fetch clients for dropdown
   const { data: clients = [], isLoading: isLoadingClients } = useQuery({
     queryKey: ["clients"],
     queryFn: async () => {
@@ -45,7 +46,8 @@ const CreateArticle = () => {
         intern: formData.internalLinks,
         doelgroep: formData.targetAudience,
         schrijfstijl: formData.formality,
-        words: formData.articleLength
+        words: formData.articleLength,
+        clientId: formData.clientId // Add the clientId parameter
       });
 
       setGenerationJobIds(jobIds);
