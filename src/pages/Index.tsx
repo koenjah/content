@@ -9,11 +9,10 @@ import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
 
 type Client = Database['public']['Tables']['clients']['Row'];
-type Article = Database['public']['Tables']['articles']['Row'] & {
-  client: Client;
-};
+type Article = Database['public']['Tables']['articles']['Row'];
 
 const Index = () => {
+  // Fetch clients with proper error handling
   const { data: clients = [], isLoading: isLoadingClients } = useQuery({
     queryKey: ['clients'],
     queryFn: async () => {
@@ -22,16 +21,15 @@ const Index = () => {
         .select('*')
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
-      return data;
-    },
-    meta: {
-      onError: (error: Error) => {
-        toast.error("Error loading clients: " + error.message);
+      if (error) {
+        console.error('Error fetching clients:', error);
+        throw error;
       }
+      return data;
     }
   });
 
+  // Fetch recent articles with client info
   const { data: recentArticles = [], isLoading: isLoadingArticles } = useQuery({
     queryKey: ['recent-articles'],
     queryFn: async () => {
@@ -39,18 +37,18 @@ const Index = () => {
         .from('articles')
         .select(`
           *,
-          client:client_id (*)
+          clients:client_id (
+            name
+          )
         `)
         .order('created_at', { ascending: false })
         .limit(5);
       
-      if (error) throw error;
-      return data as unknown as Article[];
-    },
-    meta: {
-      onError: (error: Error) => {
-        toast.error("Error loading articles: " + error.message);
+      if (error) {
+        console.error('Error fetching articles:', error);
+        throw error;
       }
+      return data as (Article & { clients: Pick<Client, 'name'> })[];
     }
   });
 
@@ -128,7 +126,7 @@ const Index = () => {
                     <div>
                       <h3 className="font-medium">{article.title}</h3>
                       <p className="text-sm text-muted-foreground">
-                        {article.client?.name}
+                        {article.clients?.name}
                       </p>
                     </div>
                     <div className="text-right">
