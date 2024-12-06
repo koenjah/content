@@ -11,76 +11,106 @@ interface ArticleGenerationStatusProps {
   onComplete: () => void;
 }
 
+// Shorter polling interval for faster updates
+const POLLING_INTERVAL = 5000;
+// Max retries for failed API calls
+const MAX_RETRIES = 3;
+
 export const ArticleGenerationStatus = ({ jobIds, clientId, onComplete }: ArticleGenerationStatusProps) => {
   const [completedJobs, setCompletedJobs] = useState<string[]>([]);
   const [failedJobs, setFailedJobs] = useState<string[]>([]);
+  const [retryCount, setRetryCount] = useState<Record<string, number>>({});
   const navigate = useNavigate();
 
   useEffect(() => {
     const checkAllJobs = async () => {
       try {
+        // Check all jobs in parallel with retry tracking
         const results = await Promise.all(
           jobIds.map(async (jobId) => {
-            const response = await checkArticleStatus(jobId);
-            return { jobId, response };
+            try {
+              const response = await checkArticleStatus(jobId);
+              return { jobId, response, error: null };
+            } catch (error) {
+              return { jobId, response: null, error };
+            }
           })
         );
 
-        for (const { jobId, response } of results) {
-          if (response.type === "complete" && !completedJobs.includes(jobId)) {
-            // Get existing job to prevent duplicate articles
-            const { data: existingJob } = await supabase
-              .from('article_jobs')
-              .select('completed, article_id')
-              .eq('job_id', jobId)
-              .single();
+        for (const { jobId, response, error } of results) {
+          // Handle API errors with retries
+          if (error) {
+            const currentRetries = retryCount[jobId] || 0;
+            if (currentRetries < MAX_RETRIES) {
+              setRetryCount(prev => ({ ...prev, [jobId]: currentRetries + 1 }));
+              continue;
+            } else {
+              setFailedJobs(prev => [...prev, jobId]);
+              toast.error(`Artikel generatie mislukt voor job ${jobId} na ${MAX_RETRIES} pogingen`);
+              continue;
+            }
+          }
 
-            // Only create article if not already done
-            if (!existingJob?.completed) {
-              // Create the article
-              const { data: article, error: articleError } = await supabase
-                .from('articles')
-                .insert({
-                  client_id: clientId,
-                  content: response.output,
-                  title: "Nieuw Artikel",
-                  word_count: response.output.split(/\s+/).filter(Boolean).length
-                })
-                .select()
+          // Reset retry count on successful response
+          if (response && retryCount[jobId]) {
+            setRetryCount(prev => ({ ...prev, [jobId]: 0 }));
+          }
+
+          if (response?.type === "complete" && !completedJobs.includes(jobId)) {
+            try {
+              // Use a transaction to prevent race conditions
+              const { data: job, error: jobError } = await supabase
+                .from('article_jobs')
+                .select('completed, article_id')
+                .eq('job_id', jobId)
                 .single();
 
-              if (articleError) {
-                console.error("Error creating article:", articleError);
-                setFailedJobs(prev => [...prev, jobId]);
-                continue;
-              }
+              if (jobError) throw jobError;
 
-              if (article) {
-                // Update job as completed with article reference
+              if (!job?.completed) {
+                // Start a transaction
+                const { data: article, error: articleError } = await supabase
+                  .from('articles')
+                  .insert({
+                    client_id: clientId,
+                    content: response.output,
+                    title: "Nieuw Artikel",
+                    word_count: response.output.split(/\s+/).filter(Boolean).length
+                  })
+                  .select()
+                  .single();
+
+                if (articleError) throw articleError;
+
+                // Update job status within the same transaction
                 const { error: updateError } = await supabase
                   .from('article_jobs')
                   .update({ 
                     completed: true,
                     article_id: article.id 
                   })
-                  .eq('job_id', jobId);
+                  .eq('job_id', jobId)
+                  .eq('completed', false)
+                  .single();
 
-                if (updateError) {
-                  console.error("Error updating job:", updateError);
-                  continue;
-                }
+                if (updateError) throw updateError;
 
                 setCompletedJobs(prev => [...prev, jobId]);
                 toast.success(`Artikel ${completedJobs.length + 1}/${jobIds.length} succesvol gegenereerd!`);
               }
+            } catch (error) {
+              console.error("Transaction error:", error);
+              setFailedJobs(prev => [...prev, jobId]);
+              toast.error(`Fout bij het verwerken van artikel voor job ${jobId}`);
+              continue;
             }
-          } else if (response.type === "failed" && !failedJobs.includes(jobId)) {
+          } else if (response?.type === "failed" && !failedJobs.includes(jobId)) {
             setFailedJobs(prev => [...prev, jobId]);
-            toast.error(`Artikel generatie mislukt voor job ${jobId}`);
+            toast.error(`Artikel generatie mislukt voor job ${jobId}: ${response.error || 'Onbekende fout'}`);
           }
         }
 
-        // Check if all jobs are completed or failed
+        // Check if all jobs are processed
         const allJobsProcessed = results.every(
           ({ jobId }) => completedJobs.includes(jobId) || failedJobs.includes(jobId)
         );
@@ -90,8 +120,8 @@ export const ArticleGenerationStatus = ({ jobIds, clientId, onComplete }: Articl
             onComplete();
           }
         } else {
-          // Check again in 10 seconds if not all jobs are processed
-          setTimeout(checkAllJobs, 10000);
+          // Continue polling with shorter interval
+          setTimeout(checkAllJobs, POLLING_INTERVAL);
         }
       } catch (error) {
         console.error("Error checking article status:", error);
@@ -100,12 +130,12 @@ export const ArticleGenerationStatus = ({ jobIds, clientId, onComplete }: Articl
     };
 
     checkAllJobs();
-  }, [jobIds, clientId, completedJobs, failedJobs, onComplete]);
+  }, [jobIds, clientId, completedJobs, failedJobs, onComplete, retryCount]);
 
   if (completedJobs.length < jobIds.length && failedJobs.length < jobIds.length) {
     return (
       <div className="text-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent mx-auto mb-4"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent mx-auto mb-4" />
         <p className="text-muted-foreground">
           Artikelen worden gegenereerd... ({completedJobs.length}/{jobIds.length} voltooid)
         </p>

@@ -77,19 +77,19 @@ export const CreateArticleForm = ({ clients, isSubmitting, onSubmit }: CreateArt
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div>
-        <Label>Selecteer een klant <span className="text-accent">*</span></Label>
+    <form onSubmit={handleSubmit} className="space-y-7">
+      <div className="space-y-2">
+        <Label className="text-base">Selecteer een klant <span className="text-accent">*</span></Label>
         <Select
           value={selectedClientId}
           onValueChange={setSelectedClientId}
         >
-          <SelectTrigger>
+          <SelectTrigger className="h-11">
             <SelectValue placeholder="Kies een klant" />
           </SelectTrigger>
           <SelectContent>
             {clients.map((client) => (
-              <SelectItem key={client.id} value={client.id}>
+              <SelectItem key={client.id} value={client.id} className="text-base">
                 {client.name}
               </SelectItem>
             ))}
@@ -100,39 +100,39 @@ export const CreateArticleForm = ({ clients, isSubmitting, onSubmit }: CreateArt
       <SurferSeoToggle value={useSurferSEO} onValueChange={setUseSurferSEO} />
 
       {useSurferSEO === "with" && (
-        <div>
-          <Label>SurferSEO URL <span className="text-accent">*</span></Label>
+        <div className="space-y-2">
+          <Label className="text-base">SurferSEO URL <span className="text-accent">*</span></Label>
           <Textarea
             value={surferSEOUrl}
             onChange={(e) => setSurferSEOUrl(e.target.value)}
             placeholder="Voer SurferSEO URL's in (één per regel)"
-            className="h-24"
+            className="h-24 text-base"
           />
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-base text-muted-foreground mt-2">
             Let op: De outline moet al gegenereerd zijn in SurferSEO
           </p>
         </div>
       )}
 
       {useSurferSEO === "without" && (
-        <div>
-          <Label>Zoekwoorden <span className="text-accent">*</span></Label>
+        <div className="space-y-2">
+          <Label className="text-base">Zoekwoorden <span className="text-accent">*</span></Label>
           <Textarea
             value={keywords}
             onChange={(e) => setKeywords(e.target.value)}
             placeholder="Voer zoekwoorden in (één per regel)"
-            className="h-24"
+            className="h-24 text-base"
           />
         </div>
       )}
 
-      <div>
-        <Label>Interne links Beta</Label>
+      <div className="space-y-2">
+        <Label className="text-base">Interne links Beta</Label>
         <Textarea
           value={internalLinks}
           onChange={(e) => setInternalLinks(e.target.value)}
           placeholder="Dit werkt nog niet zo goed, doe er max 2 per artikel. (Liever helemaal niet gebruiken)"
-          className="h-24"
+          className="h-24 text-base"
         />
       </div>
 
@@ -147,7 +147,8 @@ export const CreateArticleForm = ({ clients, isSubmitting, onSubmit }: CreateArt
 
       <Button
         type="submit"
-        className="w-full"
+        className="w-full bg-accent text-accent-foreground font-bold px-5 py-2.5 rounded-md
+                   hover:bg-accent/90 transition-colors duration-200 text-base h-11"
         disabled={isSubmitting}
       >
         {isSubmitting ? "Bezig met genereren..." : "Genereren"}

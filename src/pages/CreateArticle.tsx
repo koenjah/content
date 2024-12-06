@@ -69,24 +69,33 @@ const CreateArticle = () => {
   }
 
   return (
-    <div className="min-h-screen p-8">
-      <div className="max-w-3xl mx-auto">
-        <Button 
-          variant="ghost" 
-          onClick={() => navigate("/")}
-          className="mb-6"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Terug naar overzicht
-        </Button>
+    <div className="min-h-screen bg-background">
+      <div className="px-10 py-10 max-w-[1400px] mx-auto">
+        <div className="flex items-center gap-2.5 mb-12">
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate("/")}
+            className="flex items-center gap-2.5 text-accent hover:text-accent/90 
+                      transition-colors duration-200 p-0"
+          >
+            <ArrowLeft className="w-7 h-7" />
+            <span className="text-lg">Terug naar dashboard</span>
+          </Button>
+        </div>
 
-        <h1 className="text-2xl font-bold mb-6">Nieuw artikel maken</h1>
+        <div className="flex justify-between items-center mb-12">
+          <h1 className="text-3xl font-bold text-foreground">Nieuw artikel maken</h1>
+        </div>
         
-        <CreateArticleForm
-          clients={clients}
-          isSubmitting={generateArticleMutation.isPending}
-          onSubmit={generateArticleMutation.mutate}
-        />
+        <div className="grid grid-cols-1 gap-8">
+          <div className="bg-card border border-border rounded-md p-7">
+            <CreateArticleForm
+              clients={clients}
+              isSubmitting={generateArticleMutation.isPending}
+              onSubmit={generateArticleMutation.mutate}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

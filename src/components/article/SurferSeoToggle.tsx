@@ -8,20 +8,20 @@ interface SurferSeoToggleProps {
 
 export function SurferSeoToggle({ value, onValueChange }: SurferSeoToggleProps) {
   return (
-    <div>
-      <Label>Met of zonder SurferSEO?</Label>
+    <div className="space-y-2">
+      <Label className="text-base">Met of zonder SurferSEO?</Label>
       <RadioGroup
         value={value}
         onValueChange={onValueChange}
-        className="flex gap-4 mt-2"
+        className="flex gap-6 mt-2"
       >
-        <div className="flex items-center space-x-2">
-          <RadioGroupItem value="with" id="with-surfer" />
-          <Label htmlFor="with-surfer">Met SurferSEO</Label>
+        <div className="flex items-center space-x-2.5">
+          <RadioGroupItem value="with" id="with-surfer" className="h-5 w-5" />
+          <Label htmlFor="with-surfer" className="text-base">Met SurferSEO</Label>
         </div>
-        <div className="flex items-center space-x-2">
-          <RadioGroupItem value="without" id="without-surfer" />
-          <Label htmlFor="without-surfer">Zonder SurferSEO</Label>
+        <div className="flex items-center space-x-2.5">
+          <RadioGroupItem value="without" id="without-surfer" className="h-5 w-5" />
+          <Label htmlFor="without-surfer" className="text-base">Zonder SurferSEO</Label>
         </div>
       </RadioGroup>
     </div>
