@@ -8,23 +8,34 @@ import { toast } from 'sonner';
 export const useArticleStatusCheck = () => {
   const queryClient = useQueryClient();
 
-  // Fetch incomplete jobs
+  // Fetch incomplete jobs with more details
   const { data: incompleteJobs } = useQuery({
     queryKey: ['incomplete-jobs'],
     queryFn: async () => {
       console.log('Fetching incomplete jobs...');
       const { data, error } = await supabase
         .from('article_jobs')
-        .select('*')
-        .eq('completed', false);
+        .select(`
+          *,
+          client:clients(name)
+        `)
+        .eq('completed', false)
+        .order('created_at', { ascending: true });  // Process oldest first
 
       if (error) {
         console.error('Error fetching incomplete jobs:', error);
         throw error;
       }
-      console.log('Found incomplete jobs:', data);
-      return data || [];
-    }
+      
+      // Add time in queue for each job
+      return (data || []).map(job => ({
+        ...job,
+        timeInQueue: Date.now() - new Date(job.created_at).getTime(),
+        attempts: 0, // Track retry attempts
+      }));
+    },
+    // Poll every 30 seconds
+    refetchInterval: 30000
   });
 
   useEffect(() => {
@@ -44,15 +55,38 @@ export const useArticleStatusCheck = () => {
           const status = await checkArticleStatus(job.job_id);
           console.log(`Status for job ${job.job_id}:`, status);
           
+          // Update progress in real-time
+          queryClient.setQueryData(['incomplete-jobs'], (oldData: any) => {
+            if (!oldData) return oldData;
+            return oldData.map((j: any) => 
+              j.job_id === job.job_id 
+                ? { ...j, status: status.type, progress: status.progress || 0 }
+                : j
+            );
+          });
+
           if (status.type === 'complete' && status.output) {
             console.log(`Job ${job.job_id} is complete, creating article...`);
-            // Create article with title from API if available
+            
+            // First check if article already exists for this job
+            const { data: existingJob } = await supabase
+              .from('article_jobs')
+              .select('article_id')
+              .eq('job_id', job.job_id)
+              .single();
+
+            if (existingJob?.article_id) {
+              console.log(`Article already exists for job ${job.job_id}, skipping creation`);
+              continue;
+            }
+
+            // Create article with optimistic locking
             const { data: article, error: articleError } = await supabase
               .from('articles')
               .insert({
                 client_id: job.client_id,
                 content: status.output,
-                title: status.title || 'Nieuw Artikel', // Use API title or fallback
+                title: status.title || 'Nieuw Artikel',
                 word_count: status.output.split(/\s+/).filter(Boolean).length
               })
               .select()
@@ -63,8 +97,7 @@ export const useArticleStatusCheck = () => {
               throw articleError;
             }
 
-            console.log(`Article created for job ${job.job_id}, updating job status...`);
-            // Update job status
+            // Update job status with optimistic locking
             const { error: updateError } = await supabase
               .from('article_jobs')
               .update({ 
@@ -72,11 +105,24 @@ export const useArticleStatusCheck = () => {
                 article_id: article.id 
               })
               .eq('job_id', job.job_id)
-              .eq('completed', false)
+              .eq('completed', false)  // Optimistic lock
+              .is('article_id', null)  // Ensure no article is linked yet
               .single();
 
             if (updateError) {
               console.error(`Error updating job status for ${job.job_id}:`, updateError);
+              // Another process might have completed this job
+              console.log('Checking if job was completed by another process...');
+              const { data: finalJob } = await supabase
+                .from('article_jobs')
+                .select('completed, article_id')
+                .eq('job_id', job.job_id)
+                .single();
+
+              if (finalJob?.completed) {
+                console.log('Job was already completed by another process');
+                continue;
+              }
               throw updateError;
             }
 

@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Trash2 } from 'lucide-react';
 import { Code2 } from 'lucide-react';
 import { ArticleHtmlView } from '@/components/article/ArticleHtmlView';
+import { HtmlViewDialog } from '@/components/article/HtmlViewDialog';
 
 type Article = Database['public']['Tables']['articles']['Row'];
 type Client = Database['public']['Tables']['clients']['Row'];
@@ -121,16 +122,7 @@ const ArticlePage = () => {
                 <span>{article.word_count} woorden</span>
               </div>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={`text-muted-foreground transition-colors duration-200 gap-2
-                    ${showHtml ? 'text-accent hover:text-accent/90' : 'hover:text-foreground'}`}
-                  onClick={() => setShowHtml(!showHtml)}
-                >
-                  <Code2 className="h-[18px] w-[18px]" />
-                  <span>HTML {showHtml ? 'verbergen' : 'weergeven'}</span>
-                </Button>
+                <HtmlViewDialog content={article.content} />
                 <DeleteArticleDialog 
                   articleId={article.id} 
                   articleTitle={article.title}
@@ -148,11 +140,7 @@ const ArticlePage = () => {
               </div>
             </div>
             <div className="prose prose-invert max-w-none text-base">
-              {showHtml ? (
-                <ArticleHtmlView content={article.content} />
-              ) : (
-                <ArticleContent content={article.content} />
-              )}
+              <ArticleContent content={article.content} />
             </div>
           </Card>
         </div>

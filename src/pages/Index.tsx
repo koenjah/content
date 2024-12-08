@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 import { useArticleStatusCheck } from '@/hooks/useArticleStatusCheck';
 import { Card } from '@/components/ui/card';
+import { ActiveJobsList } from "@/components/article/ActiveJobsList";
 
 type Client = Database['public']['Tables']['clients']['Row'];
 type Article = Database['public']['Tables']['articles']['Row'];
@@ -30,7 +31,7 @@ const Index = () => {
       const { data, error } = await supabase
         .from('clients')
         .select('*, articles(*)')
-        .order('created_at', { ascending: false });
+        .order('name', { ascending: true });
       
       if (error) {
         console.error('Error fetching clients:', error);
@@ -148,9 +149,14 @@ const Index = () => {
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-2.5">
                         <FileText className="w-7 h-7 text-accent" />
-                        <h3 className="font-bold text-base text-foreground group-hover:text-accent transition-colors duration-200">
-                          {article.title}
-                        </h3>
+                        <div>
+                          <h3 className="font-bold text-base text-foreground group-hover:text-accent transition-colors duration-200">
+                            {article.title}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            {article.client?.name}
+                          </p>
+                        </div>
                       </div>
                       <span className="text-base text-accent">
                         {new Date(article.created_at).toLocaleDateString('nl-NL')}
@@ -161,6 +167,11 @@ const Index = () => {
               </div>
             )}
           </Card>
+        </div>
+
+        {/* Add Active Jobs section */}
+        <div className="mt-8">
+          <ActiveJobsList />
         </div>
       </div>
     </div>

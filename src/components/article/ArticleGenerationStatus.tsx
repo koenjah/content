@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { ArrowLeft } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface ArticleGenerationStatusProps {
   jobIds: string[];
@@ -74,7 +76,7 @@ export const ArticleGenerationStatus = ({ jobIds, clientId, onComplete }: Articl
                   .insert({
                     client_id: clientId,
                     content: response.output,
-                    title: "Nieuw Artikel",
+                    title: response.title || "Nieuw Artikel",
                     word_count: response.output.split(/\s+/).filter(Boolean).length
                   })
                   .select()
@@ -134,15 +136,28 @@ export const ArticleGenerationStatus = ({ jobIds, clientId, onComplete }: Articl
 
   if (completedJobs.length < jobIds.length && failedJobs.length < jobIds.length) {
     return (
-      <div className="text-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent mx-auto mb-4" />
-        <p className="text-muted-foreground">
-          Artikelen worden gegenereerd... ({completedJobs.length}/{jobIds.length} voltooid)
-        </p>
-        <p className="text-sm text-muted-foreground mt-2">
-          Dit kan tot 20 minuten per artikel duren.
-          Je kunt dit venster sluiten, de artikelen worden op de achtergrond gegenereerd.
-        </p>
+      <div className="min-h-screen bg-background">
+        <div className="px-10 py-10 max-w-[1400px] mx-auto">
+          <Link 
+            to="/" 
+            className="flex items-center gap-2.5 text-accent hover:text-accent/90 
+                     transition-colors duration-200 mb-12"
+          >
+            <ArrowLeft className="w-7 h-7" />
+            <span className="text-lg">Terug naar dashboard</span>
+          </Link>
+
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent mx-auto mb-4" />
+            <p className="text-muted-foreground">
+              Artikelen worden gegenereerd... ({completedJobs.length}/{jobIds.length} voltooid)
+            </p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Dit kan tot 20 minuten per artikel duren.
+              Je kunt dit venster sluiten, de artikelen worden op de achtergrond gegenereerd.
+            </p>
+          </div>
+        </div>
       </div>
     );
   }

@@ -1,5 +1,5 @@
-const API_URL = "https://api-d7b62b.stack.tryrelevance.com/latest/studios/e6bd882c-b1a4-4d33-a9fc-4f32d7f3aa32";
-const API_KEY = "fa7659c4878d-4a1f-aff2-3ea6d1ffabf9:sk-NWFjYTEyZGYtNzdkMi00M2M3LTkxZTctYjAwZmJkZTlmZTA2";
+const API_URL = "https://api-d7b62b.stack.tryrelevance.com/latest/studios/3f6edd66-6391-4621-9784-32064bc5212b";
+const API_KEY = "fa7659c4878d-4a1f-aff2-3ea6d1ffabf9:sk-YmYwMDIxNzctOTY4My00MjU1LWE2NTUtZGM0ZWU2MGQ1MmNm";
 
 interface GenerateArticleParams {
   dataset: string;
@@ -11,9 +11,13 @@ interface GenerateArticleParams {
 }
 
 interface ArticleResponse {
-  type: "complete" | "failed" | "running";
+  type: "complete" | "failed" | "running" | "pending";
   output?: string;
   error?: string;
+  title?: string;
+  progress?: number;
+  retryCount?: number;
+  lastChecked?: string;
 }
 
 interface APIUpdate {
@@ -38,6 +42,13 @@ interface APIResponse {
 
 export const startArticleGeneration = async (params: GenerateArticleParams) => {
   try {
+    // Log request params for debugging
+    console.log('Starting article generation with params:', {
+      ...params,
+      keyword: params.keyword,
+      intern: params.intern || 'Geen interne links'
+    });
+
     const response = await fetch(`${API_URL}/trigger_async`, {
       method: "POST",
       headers: {
@@ -51,24 +62,59 @@ export const startArticleGeneration = async (params: GenerateArticleParams) => {
     });
 
     if (!response.ok) {
-      throw new Error(`API error: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      console.error('API Error Response:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText
+      });
+      throw new Error(
+        `API error (${response.status}): ${errorText || response.statusText}`
+      );
     }
 
     const data = await response.json();
     if (!data.job_id) {
-      throw new Error("No job_id received from API");
+      console.error('Invalid API Response:', data);
+      throw new Error("Geen job ID ontvangen van de API. Response: " + JSON.stringify(data));
     }
+
+    console.log('Article generation started successfully:', {
+      jobId: data.job_id,
+      keyword: params.keyword
+    });
 
     return data.job_id;
   } catch (error) {
-    console.error("Error starting article generation:", error);
-    throw new Error("Failed to start article generation. Please try again.");
+    // Enhance error message based on error type
+    let errorMessage = "Artikel generatie mislukt: ";
+    if (error instanceof TypeError) {
+      errorMessage += "Netwerk fout - controleer je internetverbinding";
+    } else if (error instanceof Error) {
+      errorMessage += error.message;
+    } else {
+      errorMessage += "Onbekende fout";
+    }
+    
+    console.error("Article generation error:", {
+      error,
+      params: {
+        ...params,
+        keyword: params.keyword
+      }
+    });
+    
+    throw new Error(errorMessage);
   }
 };
 
 export const checkArticleStatus = async (jobId: string): Promise<ArticleResponse & { title?: string }> => {
   try {
     console.log('Making API request to:', `${API_URL}/async_poll/${jobId}`);
+    
+    // Add timestamp for tracking
+    const requestTime = new Date().toISOString();
+    
     const response = await fetch(`${API_URL}/async_poll/${jobId}`, {
       headers: {
         "Authorization": API_KEY
@@ -76,41 +122,53 @@ export const checkArticleStatus = async (jobId: string): Promise<ArticleResponse
     });
 
     if (!response.ok) {
-      throw new Error(`API error: ${response.status} ${response.statusText}`);
+      const errorResponse: ArticleResponse = {
+        type: "failed",
+        error: `API error: ${response.status} ${response.statusText}`,
+        lastChecked: requestTime
+      };
+      console.error('API Error:', errorResponse);
+      return errorResponse;
     }
 
     const data = await response.json() as APIResponse;
     console.log('Raw API response:', JSON.stringify(data, null, 2));
     
-    // Validate response structure
     if (!data.type) {
-      throw new Error("Invalid response format from API");
+      const errorResponse: ArticleResponse = {
+        type: "failed",
+        error: "Invalid response format from API",
+        lastChecked: requestTime
+      };
+      console.error('Invalid Response:', errorResponse);
+      return errorResponse;
     }
 
     // Extract content and title from updates array
     let content: string | undefined;
     let title: string | undefined;
+    let progress = 0;
     
     if (data.updates?.length > 0) {
       const lastUpdate = data.updates[data.updates.length - 1];
       console.log('Last update:', JSON.stringify(lastUpdate, null, 2));
       
+      // Calculate progress based on updates
+      progress = Math.min(Math.round((data.updates.length / 5) * 100), 95);
+      
       if (lastUpdate.output?.output) {
         const output = lastUpdate.output.output;
+        progress = 100; // Set to 100 if we have output
         
-        // Extract content from llm_2_2_answer
         if (output.llm_2_2_answer) {
-          content = output.llm_2_2_answer;
-          // Remove the markdown code block markers if present
-          content = content.replace(/^```html\n/, '').replace(/\n```$/, '');
+          content = output.llm_2_2_answer.replace(/^```html\n/, '').replace(/\n```$/, '');
           console.log('Found article content:', !!content);
         }
         
-        // Extract title from title_output_answer or from h1 tag in content
-        if (output.title_output_answer && output.title_output_answer !== "Please provide the article text for me to extract or generate the title.") {
+        if (output.title_output_answer && 
+            output.title_output_answer !== "Please provide the article text for me to extract or generate the title.") {
           title = output.title_output_answer;
         } else if (content) {
-          // Try to extract title from h1 tag in content
           const h1Match = content.match(/<h1>(.*?)<\/h1>/);
           if (h1Match) {
             title = h1Match[1];
@@ -120,15 +178,34 @@ export const checkArticleStatus = async (jobId: string): Promise<ArticleResponse
       }
     }
 
-    // Return standardized response with title
-    return {
-      type: data.type,
+    // Return enhanced response with progress and timestamp
+    const articleResponse: ArticleResponse = {
+      type: data.type === "complete" ? "complete" : 
+            data.type === "failed" ? "failed" : 
+            content ? "complete" : "running",
       output: content,
       error: data.error,
-      title: title
+      title: title,
+      progress: progress,
+      lastChecked: requestTime
     };
+
+    console.log('Processed article status:', {
+      jobId,
+      type: articleResponse.type,
+      progress: articleResponse.progress,
+      hasContent: !!articleResponse.output,
+      hasTitle: !!articleResponse.title
+    });
+
+    return articleResponse;
   } catch (error) {
     console.error("Error checking article status:", error);
-    throw new Error("Failed to check article status. Please try again.");
+    return {
+      type: "failed",
+      error: "Failed to check article status. Please try again.",
+      progress: 0,
+      lastChecked: new Date().toISOString()
+    };
   }
 };
